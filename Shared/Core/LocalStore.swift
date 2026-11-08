@@ -171,6 +171,13 @@ nonisolated final class LocalStore {
         db.one("SELECT * FROM messages WHERE id=?", id).map(Self.message)
     }
 
+    /// Alle Räume als gesehen markieren (nach dem ersten Abgleich eines Geräts)
+    func markAllSeen() {
+        for r in db.query("SELECT room_id, MAX(seq) AS s FROM messages GROUP BY room_id") {
+            set("read:\(r.s("room_id"))", String(r.int("s")))
+        }
+    }
+
     func maxSeq(room: String) -> Int {
         db.one("SELECT COALESCE(MAX(seq),0) AS s FROM messages WHERE room_id=?", room)?.int("s") ?? 0
     }

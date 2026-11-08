@@ -239,6 +239,9 @@ final class AppModel {
 
     private func pull(_ api: APIClient, _ store: LocalStore) async throws {
         var backfill: Set<String> = []
+        // Erster Abgleich eines Geräts: der Gesamt-Abruf enthält schon jeden Raum vollständig (kein Einzel-Nachladen),
+        // und der vorhandene Verlauf (z. B. ein Import) gilt danach als gesehen statt als „neu von anderem Gerät“.
+        let initial = store.cursor == 0
         while true {
             let page = try await api.sync(since: store.cursor, limit: 500)
             try store.db.transaction {
@@ -250,6 +253,10 @@ final class AppModel {
             }
             if !page.changes.isEmpty { revision += 1 }
             if !page.more { break }
+        }
+        if initial {
+            store.markAllSeen()
+            backfill = []
         }
         // Neu hinzugekommene Räume vollständig nachladen (z. B. wenn jemand mich in eine Gruppe aufnimmt)
         for rid in backfill {

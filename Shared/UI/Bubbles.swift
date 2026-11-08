@@ -357,18 +357,25 @@ struct FileBubble: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8).fill(Theme.accent.opacity(0.15)).frame(width: 40, height: 48)
                     if loading { ProgressView().controlSize(.small) } else {
-                        Image(systemName: "doc.fill").font(.title3).foregroundStyle(Theme.accent)
+                        Image(systemName: missing ? "doc.badge.ellipsis" : "doc.fill").font(.title3)
+                            .foregroundStyle(missing ? Color.secondary : Theme.accent)
                     }
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(message.payload.filename ?? String(localized: "Datei")).font(.callout.weight(.medium)).lineLimit(2)
-                    Text(Fmt.size(message.payload.size ?? 0)).font(.caption).foregroundStyle(.secondary)
+                    if missing {
+                        Text("Nicht mehr verfügbar").font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text(Fmt.size(message.payload.size ?? 0)).font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
         }
         .buttonStyle(.plain)
         .quickLookPreview($preview)
     }
+
+    private var missing: Bool { message.attachment == nil && message.payload.missing == true }
 
     private func open() {
         guard let a = message.attachment else { return }

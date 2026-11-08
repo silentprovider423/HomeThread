@@ -52,6 +52,25 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(store.search("muller").isEmpty)
     }
 
+    @MainActor func testImportedHistoryFlagsAndMarkAllSeen() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ht-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = try LocalStore(root: dir)
+        _ = store.apply(kind: "room", d: ["id": "room-0002", "kind": "group", "title": "Import", "created_at": 1.0, "updated_at": 1.0, "deleted": 0], me: "me")
+        _ = store.apply(kind: "message", d: ["id": "msg-file", "room_id": "room-0002", "author_id": "me", "kind": "file", "body": "",
+                                            "payload": ["filename": "alt.pdf", "size": 10, "missing": true], "created_at": 2.0,
+                                            "pinned": 0, "deleted": 0, "seq": 3], me: "me")
+        _ = store.apply(kind: "message", d: ["id": "msg-img", "room_id": "room-0002", "author_id": "me", "kind": "image", "body": "",
+                                            "payload": ["w": 40, "h": 30, "preview_only": true], "created_at": 3.0,
+                                            "pinned": 0, "deleted": 0, "seq": 4], me: "me")
+        XCTAssertEqual(store.message("msg-file")?.payload.missing, true)
+        XCTAssertEqual(store.message("msg-img")?.payload.previewOnly, true)
+        // Verlauf von einem anderen Gerät zählt als neu – bis zum ersten vollständigen Abgleich
+        XCTAssertEqual(store.summaries(myDevice: "dev-1", archived: false).first?.unread, 2)
+        store.markAllSeen()
+        XCTAssertEqual(store.summaries(myDevice: "dev-1", archived: false).first?.unread, 0)
+    }
+
     @MainActor func testVoiceWaveDownsample() {
         let v = (0..<480).map { Double($0 % 10) / 10 }
         XCTAssertEqual(VoiceRecorder.downsample(v, to: 48).count, 48)

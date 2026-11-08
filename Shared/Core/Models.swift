@@ -89,10 +89,14 @@ nonisolated struct Payload: Codable, Hashable {
     var size: Int?
     var mime: String?
     var wave: [Double]?
+    // Import: Datei gab es nicht mehr / nur die Vorschau des Fotos ist erhalten
+    var missing: Bool?
+    var previewOnly: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case question, options, multi, closed, lat, lon, name, w, h, duration, filename, size, mime, wave
+        case question, options, multi, closed, lat, lon, name, w, h, duration, filename, size, mime, wave, missing
         case showInterim = "show_interim"
+        case previewOnly = "preview_only"
     }
 
     static func decode(_ s: String) -> Payload {

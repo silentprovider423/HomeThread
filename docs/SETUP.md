@@ -98,6 +98,48 @@ Back up `data/` together with your other backups (the uploads are write-once fil
 cd server && ./run-tests.sh          # starts a throw-away container with a fresh database
 ```
 
+## 8. Import from Threema (iMazing app extraction)
+
+Threema for iOS keeps its history in a Core Data database inside the app group `group.ch.threema`. With [iMazing](https://imazing.com) you can export the app's data from an iPhone backup ("Export app data" → a `.imazingapp` file, which is a ZIP). The importer reads that file (or an unpacked folder that contains `ThreemaData.sqlite` and `.ThreemaData_SUPPORT/_EXTERNAL_DATA`) **on the server** and writes everything into one account through the server's own operations – the change log is written as usual and every device of that account receives the history with its next sync. No password or authenticator code is needed; it runs inside the container.
+
+```bash
+cd server
+# 1. copy the export onto the server, readable only for the service user (UID 10001)
+install -d -m 700 -o 10001 -g 10001 /srv/threema-import
+install -m 600 -o 10001 -g 10001 Threema.imazingapp /srv/threema-import/
+# 2. back up the database
+docker compose exec app python -m homethread.admin backup /data/before-import.db
+# 3. dry run: only counts, nothing is written
+docker compose run --rm --no-deps -v /srv/threema-import:/import:ro app \
+  python -m homethread.import_threema /import/Threema.imazingapp --user alice
+# 4. import (stop the service meanwhile), then check what a freshly signed-in device would receive
+docker compose stop app
+docker compose run --rm --no-deps -v /srv/threema-import:/import:ro app \
+  python -m homethread.import_threema /import/Threema.imazingapp --user alice --apply --verify
+docker compose start app
+# 5. remove the export again
+rm -rf /srv/threema-import
+```
+
+`--device <id or name>` (see `admin devices alice`) attributes the imported entries to one of the account's devices, so they don't show up as "new from another device" there – useful when the history was written on that phone. A device that signs in for the first time marks the existing history as seen anyway.
+
+| Threema | HomeThread |
+|---|---|
+| group, distribution list | group (name, picture, date of the first message) |
+| 1:1 chat | chat; the other person's messages appear on the left (they get a fixed placeholder author, no account) |
+| text | text with the original date; edited messages are marked as edited (the edit history is not kept) |
+| file message: photo, video, voice message, other file | photo (with Threema's thumbnail), video, voice note, file – original file name, size, caption |
+| photo whose original was never downloaded | photo made from the stored thumbnail (`preview_only`) |
+| file whose data is gone / empty file | file entry without attachment ("No longer available") |
+| quote | reply with a link to the quoted entry |
+| star, reactions, 👍/👎 acknowledgements | star, reactions |
+| poll | poll (options, single/multiple choice, closed; your own vote) |
+| location | place |
+| pinned / archived conversation | pinned / archived room |
+| system messages, deleted messages, calls | skipped |
+
+The importer prints counts only – never message contents, group or file names. All IDs are derived from Threema's IDs, so running it again adds only what is new, and entries you deleted in HomeThread are not brought back. Attachments above `HT_MAX_BLOB_MB` are skipped (counted as `attachment_too_large`).
+
 ## API in short
 
 | Method | Path | |

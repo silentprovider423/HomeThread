@@ -2659,6 +2659,22 @@
         }
       }
     },
+    "Nicht mehr verfügbar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mehr verfügbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No longer available"
+          }
+        }
+      }
+    },
     "Noch keine Chats": {
       "localizations": {
         "de": {

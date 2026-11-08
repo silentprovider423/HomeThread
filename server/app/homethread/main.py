@@ -341,6 +341,23 @@ async def blob_put(bid: str, request: Request, me=Depends(auth)):
     return {"id": bid, "size": size, "sha256": h.hexdigest()}
 
 
+def save_blob(bid, owner_id, data, mime, filename=""):
+    """Anhang direkt auf dem Server ablegen (Importe); gleiche Ablage wie PUT /api/blobs. Gibt es die ID schon,
+    bleibt alles, wie es ist."""
+    bid = check_id(bid)
+    if db.one("SELECT 1 FROM blobs WHERE id=?", (bid,)):
+        return bid
+    p = blob_path(bid)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p + ".part", "wb") as f:
+        f.write(data)
+    os.replace(p + ".part", p)
+    db.x("INSERT INTO blobs(id, owner_id, mime, size, sha256, filename, created) VALUES(?,?,?,?,?,?,?)",
+         (bid, owner_id, (mime or "application/octet-stream")[:100], len(data), hashlib.sha256(data).hexdigest(),
+          (filename or "")[:200].replace("/", "_"), now()))
+    return bid
+
+
 def my_room_ids(uid):
     return {r["room_id"] for r in db.q("SELECT room_id FROM members WHERE user_id=? AND removed=0", (uid,))}
 
@@ -536,7 +553,9 @@ def clean_payload(kind, p):
     return p
 
 
-def op_msg_create(o, me):
+def op_msg_create(o, me, *, author=None, touch=True):
+    """author/touch nur für Importe auf dem Server: Eintrag einer anderen Person zuordnen (z. B. die Gegenseite
+    eines importierten Einzelchats) bzw. den Raum erst nach dem letzten Eintrag einmal anstoßen."""
     m = o.get("msg") or {}
     mid = check_id(m.get("id"), "message")
     if db.one("SELECT 1 FROM messages WHERE id=?", (mid,)):
@@ -554,12 +573,13 @@ def op_msg_create(o, me):
     seq = db.change("message", mid, rid)
     db.x("INSERT INTO messages(id, room_id, author_id, device_id, kind, body, payload, reply_to, attachment, thumb, "
          "created_at, server_at, seq) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-         (mid, rid, me["id"], me["device_id"], kind, body, dumps(payload), reply, att, thumb,
+         (mid, rid, author or me["id"], me["device_id"], kind, body, dumps(payload), reply, att, thumb,
           float(m.get("created_at") or now()), now(), seq))
     for i, it in enumerate(m.get("items") or []):
         add_item({"id": it.get("id"), "message_id": mid, "text": it.get("text", ""),
                   "position": it.get("position", i), "done": it.get("done", False)}, me, rid)
-    touch_room(rid)
+    if touch:
+        touch_room(rid)
 
 
 def op_msg_edit(o, me):
