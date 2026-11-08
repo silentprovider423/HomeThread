@@ -1,0 +1,135 @@
+name: HomeThread
+options:
+  bundleIdPrefix: org.homeroll
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "15.0"
+  createIntermediateGroups: true
+  developmentLanguage: de
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+targets:
+  HomeThread:
+    type: application
+    platform: iOS
+    sources:
+      - path: Shared
+      - path: iOS
+        excludes: ["Info.plist"]
+      - path: Resources
+        buildPhase: resources
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: HomeThread
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, de]
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSCameraUsageDescription: "Damit du Fotos und Videos direkt in einen Chat aufnehmen kannst."
+        NSPhotoLibraryUsageDescription: "Damit du Fotos und Videos in einem Chat ablegen kannst."
+        NSMicrophoneUsageDescription: "Damit du Sprachnotizen aufnehmen kannst."
+        NSLocationWhenInUseUsageDescription: "Damit du deinen aktuellen Ort in einem Chat festhalten kannst."
+        NSLocalNetworkUsageDescription: "Verbindung zu deinem HomeThread-Server im Heimnetz."
+        ITSAppUsesNonExemptEncryption: false
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.homeroll.thread
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  HomeThreadMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Shared
+      - path: macOS
+        excludes: ["Info.plist"]
+      - path: Resources
+        buildPhase: resources
+    info:
+      path: macOS/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: HomeThread
+        CFBundleName: HomeThread
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, de]
+        LSApplicationCategoryType: public.app-category.productivity
+        NSMicrophoneUsageDescription: "Damit du Sprachnotizen aufnehmen kannst."
+        NSLocationUsageDescription: "Damit du deinen aktuellen Ort in einem Chat festhalten kannst."
+        NSLocationWhenInUseUsageDescription: "Damit du deinen aktuellen Ort in einem Chat festhalten kannst."
+        NSPhotoLibraryUsageDescription: "Damit du Fotos und Videos in einem Chat ablegen kannst."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.homeroll.thread.mac
+        PRODUCT_NAME: HomeThread
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
+        COMBINE_HIDPI_IMAGES: YES
+
+  HomeThreadTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/Unit
+    dependencies:
+      - target: HomeThread
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.homeroll.thread.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/HomeThread.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HomeThread
+        BUNDLE_LOADER: $(TEST_HOST)
+
+  HomeThreadUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/UI
+    dependencies:
+      - target: HomeThread
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.homeroll.thread.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: HomeThread
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+
+schemes:
+  HomeThread:
+    build:
+      targets:
+        HomeThread: all
+        HomeThreadTests: [test]
+        HomeThreadUITests: [test]
+    test:
+      targets:
+        - HomeThreadTests
+        - HomeThreadUITests
+  HomeThreadMac:
+    build:
+      targets:
+        HomeThreadMac: all

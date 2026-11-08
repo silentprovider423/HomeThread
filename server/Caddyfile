@@ -1,0 +1,32 @@
+{
+	admin off
+	auto_https off
+}
+
+{$HT_LISTEN} {
+	request_body {
+		max_size 100MB
+	}
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		Strict-Transport-Security "max-age=31536000"
+	}
+	@api path /api/* /auth/*
+	handle @api {
+		reverse_proxy 127.0.0.1:8080 {
+			# echte Gegenstelle mitgeben; ein vom Aufrufer gesetzter Wert wird hier überschrieben
+			header_up X-Real-Peer {remote_host}
+			transport http {
+				read_timeout 10m
+				write_timeout 10m
+			}
+		}
+	}
+	handle {
+		respond 404
+	}
+}

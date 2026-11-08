@@ -1,0 +1,15 @@
+*.xcodeproj/
+build/
+build-ipa/
+build-mac/
+Payload/
+DerivedData/
+.DS_Store
+xcuserdata/
+.test-account
+.test-tokens
+.sim-udid
+*.ipa
+server/.env
+server/data/
+server/backup/

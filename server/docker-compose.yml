@@ -1,0 +1,28 @@
+# HomeThread-Server: Caddy (nur /api und /auth, sonst 404) vor dem Sync-Dienst.
+# TLS übernimmt der vorgeschaltete Rand (z. B. Cloudflare-Tunnel) – siehe docs/SETUP.md.
+services:
+  app:
+    build: ./app
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8080:8080"   # nur für Caddy auf demselben Rechner
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 1g
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    network_mode: host          # sieht die echte Gegenstelle (wichtig für die Sperren)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    environment:
+      - HT_LISTEN=${HT_LISTEN:-:80}
+    depends_on: [app]
+volumes:
+  caddy_data:
