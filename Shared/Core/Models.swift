@@ -43,8 +43,7 @@ nonisolated struct Room: Identifiable, Hashable {
     var memberCount = 1
 
     var subtitle: String {
-        guard kind == .group else { return String(localized: "Chat") }
-        return memberCount <= 1 ? String(localized: "Gruppe · nur du") : String(localized: "Gruppe · \(memberCount) Personen")
+        memberCount <= 1 ? String(localized: "Ich") : String(localized: "\(memberCount) Mitglieder")
     }
 }
 
@@ -214,6 +213,21 @@ nonisolated enum Fmt {
             return d.formatted(.dateTime.weekday(.wide))
         }
         return d.formatted(date: .numeric, time: .omitted)
+    }
+
+    /// Zeitstempel im Desktop-Stil: heute „3:35“, „Gestern, 15:19“, „Freitag, 16:36“, „25. Sept., 17:16“ (anderes Jahr mit Jahr).
+    static func stamp(_ d: Date, now: Date = .now) -> String {
+        let cal = Calendar.current
+        let t = time(d)
+        if cal.isDate(d, inSameDayAs: now) { return t }
+        if let y = cal.date(byAdding: .day, value: -1, to: now), cal.isDate(d, inSameDayAs: y) { return String(localized: "Gestern, \(t)") }
+        if let days = cal.dateComponents([.day], from: cal.startOfDay(for: d), to: cal.startOfDay(for: now)).day, days > 0, days < 7 {
+            return d.formatted(.dateTime.weekday(.wide)) + ", " + t
+        }
+        if cal.component(.year, from: d) == cal.component(.year, from: now) {
+            return d.formatted(.dateTime.day().month(.abbreviated)) + ", " + t
+        }
+        return d.formatted(.dateTime.day().month(.abbreviated).year()) + ", " + t
     }
 
     static func dayPill(_ d: Date) -> String {

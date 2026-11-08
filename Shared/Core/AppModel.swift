@@ -325,6 +325,17 @@ final class AppModel {
         store?.enqueue(op: o)
     }
 
+    @ObservationIgnored private var summaryCache: [Bool: (Int, [RoomSummary])] = [:]
+
+    /// Chat-Liste je Stand (`revision`) nur einmal abfragen – Tippen in der Suche, Hover usw. fragen nicht neu.
+    func summaries(archived: Bool) -> [RoomSummary] {
+        let _ = revision
+        if let c = summaryCache[archived], c.0 == revision { return c.1 }
+        let list = store?.summaries(myDevice: myDevice, archived: archived) ?? []
+        summaryCache[archived] = (revision, list)
+        return list
+    }
+
     func user(_ id: String) -> UserInfo? {
         if id == me { return session?.user }
         return users.first { $0.id == id }
@@ -450,6 +461,7 @@ final class AppModel {
 
     func saveDraft(_ room: String, _ text: String) {
         store?.set("draft:\(room)", text.isEmpty ? nil : text)
+        summaryCache = [:]
     }
 
     // MARK: Einträge

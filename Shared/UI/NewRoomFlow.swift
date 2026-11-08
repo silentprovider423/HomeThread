@@ -57,7 +57,7 @@ struct NewRoomFlow: View {
                         if picked.contains(u.id) { picked.remove(u.id) } else { picked.insert(u.id) }
                     } label: {
                         HStack(spacing: 12) {
-                            Avatar(title: u.displayName, size: 40, colorKey: u.id)
+                            Avatar(title: u.displayName, size: 40, colorKey: u.id, person: true)
                             VStack(alignment: .leading) {
                                 Text(u.displayName)
                                 Text("@\(u.username)").font(.caption).foregroundStyle(.secondary)

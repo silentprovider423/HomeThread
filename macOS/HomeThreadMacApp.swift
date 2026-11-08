@@ -9,12 +9,14 @@ struct HomeThreadMacApp: App {
         WindowGroup("HomeThread", id: "main") {
             AppRoot()
                 .environment(model)
-                .frame(minWidth: 760, minHeight: 480)
+                .frame(minWidth: 820, minHeight: 500)
                 #if DEBUG
                 .task { await Snapshot.runIfRequested() }
                 #endif
         }
-        .defaultSize(width: 1100, height: 720)
+        .defaultSize(width: 1200, height: 780)
+        .windowStyle(.hiddenTitleBar)
+        .windowBackgroundDragBehavior(.enabled)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Neuer Chat") { model.requestNew = .chat }.keyboardShortcut("n")

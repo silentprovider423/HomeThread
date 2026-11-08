@@ -24,6 +24,13 @@ struct MessageBubble: View {
     @State private var confirmDelete = false
 
     var mine: Bool { message.authorId == model.me }
+    #if os(macOS)
+    static let padV: CGFloat = 8, padH: CGFloat = 10
+    static let textFont = Font.system(size: 14)
+    #else
+    static let padV: CGFloat = 7, padH: CGFloat = 12
+    static let textFont = Font.body
+    #endif
     var maxWidth: CGFloat {
         #if os(macOS)
         return 560
@@ -41,8 +48,13 @@ struct MessageBubble: View {
             }
             if !mine { Spacer(minLength: 40) }
         }
+        #if os(macOS)
+        .padding(.horizontal, 14)
+        .padding(.top, compactTop ? 4 : 8)
+        #else
         .padding(.horizontal, 8)
         .padding(.top, compactTop ? 2 : 6)
+        #endif
         .offset(x: dragX)
         .overlay(alignment: .leading) {
             if dragX > 20 {
@@ -82,11 +94,11 @@ struct MessageBubble: View {
             }
             meta
         }
-        .padding(.vertical, message.hasMedia ? 4 : 7)
-        .padding(.horizontal, message.hasMedia ? 4 : 12)
+        .padding(.vertical, message.hasMedia ? 2 : Self.padV)
+        .padding(.horizontal, message.hasMedia ? 2 : Self.padH)
         .background(
             RoundedRectangle(cornerRadius: Theme.bubbleRadius, style: .continuous)
-                .fill(highlighted ? Theme.ownBubbleSelected : (mine ? Theme.ownBubble : Theme.otherBubble))
+                .fill(highlighted ? (mine ? Theme.ownBubbleSelected : Theme.otherBubbleSelected) : (mine ? Theme.ownBubble : Theme.otherBubble))
         )
         .overlay(alignment: .topTrailing) {
             if message.pinned {
@@ -109,7 +121,9 @@ struct MessageBubble: View {
         case .text:
             Text(Self.rich(message.body))
                 .textSelection(.enabled)
-                .font(.body)
+                .font(Self.textFont)
+                .foregroundStyle(Theme.text1Bubble)
+                .tint(Theme.link)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("bubble.text.\(message.body.prefix(40))")
         case .image, .video:
@@ -125,38 +139,50 @@ struct MessageBubble: View {
 
     private var meta: some View {
         HStack(spacing: 4) {
-            if message.editedAt != nil { Text("bearbeitet") }
             if ctx.starred.contains(message.id) { Image(systemName: "star.fill").foregroundStyle(Theme.star) }
             if let d = message.deviceId, d != model.myDevice {
                 Image(systemName: model.devices[d]?.platform == "mac" ? "laptopcomputer" : "iphone")
                     .accessibilityLabel(Text("von anderem Gerät"))
             }
-            Text(Fmt.time(message.createdAt)).monospacedDigit()
+            Text(stampText).monospacedDigit()
             if message.failed != nil {
                 Button { model.retry(message) } label: {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Erneut versuchen"))
-            } else if mine {
-                Image(systemName: message.pending ? "clock" : "checkmark")
-                    .accessibilityLabel(Text(message.pending ? "wartet auf Abgleich" : "gesichert"))
+            } else if mine && message.pending {
+                Image(systemName: "clock").accessibilityLabel(Text("wartet auf Abgleich"))
             }
         }
+        #if os(macOS)
+        .font(.system(size: 12))
+        #else
         .font(.caption2)
-        .foregroundStyle(.secondary)
+        #endif
+        .foregroundStyle(Theme.metaText)
         .padding(.horizontal, message.hasMedia ? 8 : 0)
         .padding(.bottom, message.hasMedia ? 4 : 0)
+    }
+
+    /// Mac: Datum + Uhrzeit wie am Desktop („14. Okt., 20:13“), iPhone: Uhrzeit; bearbeitet mit Vorsatz „Bearbeitet“.
+    private var stampText: String {
+        #if os(macOS)
+        let t = Fmt.stamp(message.editedAt ?? message.createdAt)
+        #else
+        let t = Fmt.time(message.editedAt ?? message.createdAt)
+        #endif
+        return message.editedAt != nil ? String(localized: "Bearbeitet \(t)") : t
     }
 
     private func quote(_ id: String) -> some View {
         let q = ctx.byID[id] ?? model.store?.message(id)
         return Button { onJump(id) } label: {
             HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 1.5).fill(Theme.accent).frame(width: 3)
+                RoundedRectangle(cornerRadius: 1).fill(quoteColor(q)).frame(width: 2)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(q.flatMap { model.user($0.authorId)?.displayName } ?? String(localized: "Eintrag"))
-                        .font(.caption.weight(.semibold)).foregroundStyle(Theme.accent)
+                        .font(.caption.weight(.bold)).foregroundStyle(quoteColor(q))
                     Group {
                         if let q, !q.deleted { PreviewText(message: q) } else {
                             Text(q == nil ? String(localized: "Eintrag nicht gefunden") : String(localized: "Gelöschter Eintrag"))
@@ -165,11 +191,16 @@ struct MessageBubble: View {
                         .font(.caption).foregroundStyle(.secondary).lineLimit(3)
                 }
             }
-            .padding(6)
-            .background(RoundedRectangle(cornerRadius: 8).fill(.primary.opacity(0.06)))
+            .padding(.vertical, 2)
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, message.hasMedia ? 4 : 0)
+        .padding(.horizontal, message.hasMedia ? 8 : 0)
+        .padding(.top, message.hasMedia ? 6 : 0)
+    }
+
+    private func quoteColor(_ q: Message?) -> Color {
+        guard let q, ctx.isGroup, q.authorId != model.me else { return Theme.accent }
+        return Theme.color(for: q.authorId)
     }
 
     private func reactionPills(_ r: [ReactionCount]) -> some View {
@@ -180,8 +211,10 @@ struct MessageBubble: View {
                         Text(x.emoji)
                         if x.count > 1 { Text("\(x.count)").font(.caption2.monospacedDigit()) }
                     }
-                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .frame(minWidth: 20)
                     .background(Capsule().fill(x.mine ? Theme.reactionPillMine : Theme.reactionPill))
+                    .overlay(Capsule().strokeBorder(Theme.reactionBorder, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("reaction.\(x.emoji)")
@@ -190,10 +223,27 @@ struct MessageBubble: View {
         .font(.callout)
     }
 
-    /// Links und einfache Hervorhebungen (**fett**, _kursiv_) anzeigen, Text sonst unverändert lassen.
+    /// Links (auch nackte Adressen) und einfache Hervorhebungen (**fett**, _kursiv_) anzeigen, Text sonst unverändert lassen.
     static func rich(_ s: String) -> AttributedString {
-        (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
+        if let c = richCache.object(forKey: s as NSString) { return c.value }
+        var a = (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
+        let plain = String(a.characters)
+        if plain.contains("."), let det = linkDetector {
+            var from = a.startIndex
+            for m in det.matches(in: plain, range: NSRange(plain.startIndex..., in: plain)) {
+                guard let url = m.url, let r = Range(m.range, in: plain), from < a.endIndex,
+                      let ar = a[from...].range(of: String(plain[r])) else { continue }
+                if a[ar].link == nil { a[ar].link = url }
+                from = ar.upperBound
+            }
+        }
+        richCache.setObject(RichBox(value: a), forKey: s as NSString)
+        return a
     }
+
+    private final class RichBox { let value: AttributedString; init(value: AttributedString) { self.value = value } }
+    nonisolated(unsafe) private static let richCache: NSCache<NSString, RichBox> = { let c = NSCache<NSString, RichBox>(); c.countLimit = 3000; return c }()
+    nonisolated(unsafe) private static let linkDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 
     static let quickReactions = ["👍", "👎", "❤️", "😂", "😢", "🙏"]
     static let moreReactions = ["🎉", "🔥", "✅", "❓", "👀", "💡", "⭐️", "😮"]
@@ -291,7 +341,7 @@ struct MediaThumb: View {
             }
         }
         .frame(width: 250, height: 250 / ratio)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.bubbleRadius - 4, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.bubbleRadius - 2, style: .continuous))
         .contentShape(Rectangle())
         .accessibilityLabel(Text(message.kind == .video ? "Video" : "Foto"))
     }

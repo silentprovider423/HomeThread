@@ -5,6 +5,11 @@ Aufruf nach einem iOS- und einem Mac-Build:  python3 tools/strings.py   (meldet 
 import glob, json, os, sys
 
 EN = {
+    "%lld Mitglieder": "%lld members", "Archivierte Chats": "Archived Chats", "Bearbeitet %@": "Edited %@", "Details": "Details",
+    "Emoji": "Emoji", "Fehler": "Error", "Gestern, %@": "Yesterday, %@", "Ich": "Me",
+    "Lege mit ⌘N einen Chat oder mit ⇧⌘N eine Gruppe an.": "Create a chat with ⌘N or a group with ⇧⌘N.",
+    "Neue Nachricht": "New Message", "Neue Nachricht…": "New message…", "Nicht mehr verfügbar": "No longer available",
+    "Suche leeren": "Clear Search", "Suchen…": "Search…", "Weitere": "More",
     "%lld neu von anderem Gerät": "%lld new from another device", "%lld Änderungen warten": "%lld changes waiting",
     "Abbrechen": "Cancel", "Abgeglichen": "Up to date", "Abgleich": "Sync", "Abgleich läuft …": "Syncing…",
     "Ablegen": "Add", "Abmelden": "Sign Out", "Abmelden?": "Sign out?", "Abspielen": "Play",

@@ -22,10 +22,11 @@ shot ios-4-dark 7 THREAD_OPEN="Garden" THREAD_APPEARANCE=2
 xcrun simctl status_bar "$SIM" clear
 # Mac: Fenster rendert sich selbst in eine PNG (nur Debug)
 MAC=build/Build/Products/Debug/HomeThread.app/Contents/MacOS/HomeThread
-for m in "mac-1-light:1" "mac-2-dark:2"; do
-  n=${m%%:*}; a=${m##*:}
-  THREAD_SERVER="$THREAD_SERVER" THREAD_TOKEN="$THREAD_DEMO_TOKEN2" THREAD_RESET=1 THREAD_OPEN="Trip to Lisbon" THREAD_APPEARANCE=$a \
+for m in "mac-1-light:1:info" "mac-2-dark:2:"; do
+  n=${m%%:*}; r=${m#*:}; a=${r%%:*}; show=${r#*:}
+  THREAD_SERVER="$THREAD_SERVER" THREAD_TOKEN="$THREAD_DEMO_TOKEN2" THREAD_RESET=1 THREAD_OPEN="Trip to Lisbon" THREAD_APPEARANCE=$a THREAD_SHOW=$show \
     THREAD_SNAPSHOT="$PWD/$OUT/$n.png" "$MAC" -AppleLanguages "(en)" -AppleLocale en_US >/dev/null 2>&1 || true
 done
+xcrun simctl shutdown "$SIM"
 python3 tools/strip-meta.py $OUT/*.png
 ls -la $OUT

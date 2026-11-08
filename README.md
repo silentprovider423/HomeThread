@@ -61,10 +61,10 @@ Everything is stored on the device first (offline-first) and synced with a small
 - Change password; reset password with the authenticator code (signs out all devices)
 
 **Mac**
-- Native two-column window: chats/starred/archive and search on the left, the chat on the right, info as inspector (⌘I)
-- ⌘N new chat, ⇧⌘N new group, ⌘F search in chat, ⌘R sync, Return adds an entry (configurable), Settings (⌘,)
+- Desktop-messenger window: a slim bar on the left (Chats, Starred, Archive, Settings, profile), the chat list with search next to it, the chat on the right, room info as a third column (⌘I)
+- ⌘N new chat, ⇧⌘N new group, ⌘F search in chat, ⇧⌘F search all chats, ⌘R sync, Return adds an entry (configurable), Settings (⌘,)
 
-**Look**: iOS 26 Liquid Glass bars and buttons, light and dark mode, own petrol accent colour.
+**Look**: classic secure-messenger style – on iPhone a solid tab bar, light green own bubbles, date pills and a plain input bar with +, camera and microphone; on the Mac a dark-grey desktop layout with tinted initials avatars, full timestamps in the bubbles and a "New message…" compose bar. Light and dark mode.
 
 **Import**: bring your Threema history (iPhone, via an iMazing app extraction) into your account – groups, texts, photos, files, voice notes, polls, quotes and stars with their original dates. See [docs/SETUP.md](docs/SETUP.md#8-import-from-threema-imazing-app-extraction).
 

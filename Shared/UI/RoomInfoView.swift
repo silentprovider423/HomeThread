@@ -19,6 +19,8 @@ struct RoomInfoView: View {
     @Environment(\.dismiss) private var dismiss
     let roomId: String
     var onJump: (String) -> Void = { _ in }
+    /// iPhone: Schnellaktion „Suchen“ startet die Suche im Chat
+    var onSearch: (() -> Void)?
     @State private var editingName = false
     @State private var name = ""
     @State private var about = ""
@@ -36,6 +38,7 @@ struct RoomInfoView: View {
             let isOwner = members.first { $0.userId == model.me }?.isOwner ?? (room.createdBy == model.me)
             List {
                 header(room)
+                quickActions(room)
                 Section {
                     TextField("Beschreibung (optional)", text: $about, axis: .vertical)
                         .onSubmit { model.setRoomAbout(roomId, about: about) }
@@ -45,7 +48,7 @@ struct RoomInfoView: View {
                     Section {
                         ForEach(showAllMembers ? members : Array(members.prefix(5))) { m in
                             HStack(spacing: 12) {
-                                Avatar(title: m.displayName, size: 36, colorKey: m.userId)
+                                Avatar(title: m.displayName, size: 36, colorKey: m.userId, person: true)
                                 VStack(alignment: .leading) {
                                     Text(m.userId == model.me ? String(localized: "Du (\(m.displayName))") : m.displayName)
                                     Text("@\(m.username)").font(.caption).foregroundStyle(.secondary)
@@ -182,6 +185,38 @@ struct RoomInfoView: View {
         .listRowBackground(Color.clear)
     }
 
+    /// Reihe runder Schnellaktionen unter dem Kopf (Suchen, Anheften, Archivieren).
+    private func quickActions(_ room: Room) -> some View {
+        Section {
+            HStack(spacing: 10) {
+                if let onSearch {
+                    quick("Suchen", "magnifyingglass", action: onSearch)
+                }
+                quick(room.pinned ? "Lösen" : "Anheften", room.pinned ? "pin.slash.fill" : "pin.fill") {
+                    model.setRoomState(roomId, pinned: !room.pinned)
+                }
+                quick(room.archived ? "Zurückholen" : "Archivieren", "archivebox.fill") {
+                    model.setRoomState(roomId, archived: !room.archived)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+    }
+
+    private func quick(_ title: LocalizedStringKey, _ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: icon).font(.system(size: 18)).foregroundStyle(Theme.accent)
+                Text(title).font(.caption).foregroundStyle(Theme.accent).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity).frame(height: 58)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.infoTile))
+            .contentShape(Rectangle())
+        }
+    }
+
     private func saveName() {
         model.renameRoom(roomId, title: name)
         editingName = false
@@ -207,7 +242,7 @@ struct AddPersonSheet: View {
                         dismiss()
                     } label: {
                         HStack(spacing: 12) {
-                            Avatar(title: u.displayName, size: 36, colorKey: u.id)
+                            Avatar(title: u.displayName, size: 36, colorKey: u.id, person: true)
                             Text(u.displayName)
                         }
                     }
@@ -301,16 +336,21 @@ struct MessageRow: View {
     var showRoom = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack {
-                if showRoom, let r = model.store?.room(message.roomId) {
-                    Text(r.title).font(.subheadline.weight(.semibold))
-                }
-                Spacer()
-                Text(Fmt.listDate(message.createdAt)).font(.caption).foregroundStyle(.secondary)
+        let room = showRoom ? model.store?.room(message.roomId) : nil
+        HStack(alignment: .top, spacing: 12) {
+            if let room {
+                Avatar(title: room.title, image: room.avatar, isGroup: room.kind == .group, size: 40, colorKey: room.id)
             }
-            PreviewText(message: message).font(.subheadline).foregroundStyle(showRoom ? .secondary : .primary).lineLimit(3)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    if let room { Text(room.title).font(.subheadline.weight(.semibold)).lineLimit(1) }
+                    Spacer()
+                    Text(Fmt.listDate(message.createdAt)).font(.caption).foregroundStyle(.secondary)
+                }
+                PreviewText(message: message).font(.subheadline).foregroundStyle(showRoom ? .secondary : .primary).lineLimit(3)
+            }
         }
+        .padding(.vertical, 2)
         .contentShape(Rectangle())
     }
 }

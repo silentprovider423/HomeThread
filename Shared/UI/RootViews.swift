@@ -7,35 +7,39 @@ struct ChatRoute: Hashable {
 }
 
 #if os(iOS)
-/// iPhone: Tabs Chats · Gemerkt · Einstellungen · Suche (Liquid-Glass-Tableiste von iOS 26).
+/// iPhone: klassische Tab-Leiste unten (Chats · Gemerkt · Einstellungen), deckend statt Glas; im geöffneten Chat ausgeblendet.
 struct PhoneRoot: View {
     @Environment(AppModel.self) private var model
     @State private var tab = 0
     @State private var path = NavigationPath()
 
     var body: some View {
-        TabView(selection: $tab) {
-            Tab("Chats", systemImage: "bubble.left.and.bubble.right.fill", value: 0) {
-                NavigationStack(path: $path) {
-                    ChatListView()
-                        .navigationDestination(for: String.self) { ChatView(roomId: $0) }
-                        .navigationDestination(for: ChatRoute.self) { ChatView(roomId: $0.room, jumpTo: $0.jump) }
+        VStack(spacing: 0) {
+            Group {
+                switch tab {
+                case 1:
+                    NavigationStack { StarredView(onOpen: open) }
+                case 2:
+                    NavigationStack { SettingsView() }
+                default:
+                    NavigationStack(path: $path) {
+                        ChatListView(onOpen: open)
+                            .navigationDestination(for: String.self) { ChatView(roomId: $0) }
+                            .navigationDestination(for: ChatRoute.self) { ChatView(roomId: $0.room, jumpTo: $0.jump) }
+                    }
                 }
             }
-            Tab("Gemerkt", systemImage: "star", value: 1) {
-                NavigationStack { StarredView(onOpen: open) }
-            }
-            Tab("Einstellungen", systemImage: "gearshape", value: 2) {
-                NavigationStack { SettingsView() }
-            }
-            Tab(value: 3, role: .search) {
-                NavigationStack { GlobalSearchView(onOpen: open) }
+            .frame(maxHeight: .infinity)
+            if !(tab == 0 && !path.isEmpty) {
+                PhoneTabBar(tab: $tab, unread: model.summaries(archived: false).reduce(0) { $0 + ($1.unread > 0 ? 1 : 0) })
+                    .transition(.move(edge: .bottom))
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: path.isEmpty)
         .tint(Theme.accent)
         .onChange(of: model.debugTab) { _, t in if let t { tab = t; model.debugTab = nil } }
         .onChange(of: model.debugOpen, initial: true) { _, t in
-            guard let t, let s = model.store?.summaries(myDevice: model.myDevice, archived: false).first(where: { $0.room.title == t }) else { return }
+            guard let t, let s = model.summaries(archived: false).first(where: { $0.room.title == t }) else { return }
             tab = 0
             path = NavigationPath()
             path.append(s.id)
@@ -46,105 +50,43 @@ struct PhoneRoot: View {
     private func open(_ room: String, _ message: String) {
         tab = 0
         path = NavigationPath()
-        path.append(ChatRoute(room: room, jump: message.isEmpty ? nil : message))
+        if message.isEmpty { path.append(room) } else { path.append(ChatRoute(room: room, jump: message)) }
     }
 }
-#endif
 
-#if os(macOS)
-/// Mac: zwei Spalten wie ein Desktop-Messenger – links Chats/Gemerkt/Suche, rechts der Chat, Infos als Inspector (⌘I).
-struct MacRoot: View {
-    @Environment(AppModel.self) private var model
-    @State private var selection: String?
-    @State private var jump: String?
-    @State private var showInfo = false
-    @State private var mode = 0
-    @State private var query = ""
-    @State private var newRoom: NewRoomFlow.Mode?
+/// Deckende Tab-Leiste mit Symbol + Beschriftung, gewählter Tab in Akzentfarbe, Zähler am Chats-Symbol.
+struct PhoneTabBar: View {
+    @Binding var tab: Int
+    var unread: Int
 
     var body: some View {
-        NavigationSplitView {
-            VStack(spacing: 0) {
-                Picker("", selection: $mode) {
-                    Text("Chats").tag(0)
-                    Text("Gemerkt").tag(1)
-                    Text("Archiv").tag(2)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                if !query.isEmpty {
-                    MacSearchResults(query: query) { r, m in selection = r; jump = m.isEmpty ? nil : m }
-                } else if mode == 1 {
-                    List(model.store?.starredMessages() ?? []) { m in
-                        Button { selection = m.roomId; jump = m.id } label: { MessageRow(message: m) }.buttonStyle(.plain)
+        HStack(spacing: 0) {
+            item(0, "Chats", "bubble.left.and.bubble.right.fill", badge: unread)
+            item(1, "Gemerkt", "star.fill")
+            item(2, "Einstellungen", "gearshape.fill")
+        }
+        .padding(.top, 6)
+        .background(Theme.tabBar.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) { Theme.hairline.frame(height: 0.5) }
+    }
+
+    private func item(_ i: Int, _ title: LocalizedStringKey, _ icon: String, badge: Int = 0) -> some View {
+        Button { tab = i } label: {
+            VStack(spacing: 3) {
+                Image(systemName: icon).font(.system(size: 21))
+                    .frame(height: 26)
+                    .overlay(alignment: .topTrailing) {
+                        if badge > 0 { UnreadBadge(count: badge).scaleEffect(0.85).offset(x: 14, y: -6) }
                     }
-                    .overlay { if (model.store?.starredMessages() ?? []).isEmpty { ContentUnavailableView("Noch nichts gemerkt", systemImage: "star") } }
-                } else {
-                    ChatListView(archived: mode == 2, selection: $selection)
-                }
+                Text(title).font(.system(size: 10, weight: .medium))
             }
-            .searchable(text: $query, placement: .sidebar, prompt: Text("In allen Chats suchen"))
-            .navigationSplitViewColumnWidth(min: 260, ideal: 310, max: 420)
-            .toolbar {
-                ToolbarItem {
-                    Menu {
-                        Button("Neuer Chat") { newRoom = .chat }
-                        Button("Neue Gruppe") { newRoom = .group }
-                    } label: { Label("Neu", systemImage: "square.and.pencil") }
-                }
-                ToolbarItem { SyncBadge() }
-            }
-        } detail: {
-            if let selection, model.store?.room(selection) != nil {
-                NavigationStack {
-                    ChatView(roomId: selection, showInfo: $showInfo, jumpTo: jump)
-                        .id(selection + (jump ?? ""))
-                }
-                .inspector(isPresented: $showInfo) {
-                    NavigationStack { RoomInfoView(roomId: selection, onJump: { jump = $0 }) }
-                        .inspectorColumnWidth(min: 280, ideal: 320, max: 420)
-                }
-            } else {
-                ContentUnavailableView {
-                    Label("Kein Chat ausgewählt", systemImage: "bubble.left.and.bubble.right")
-                } description: {
-                    Text("Wähle links einen Chat oder lege mit ⌘N einen neuen an.")
-                }
-            }
+            .foregroundStyle(tab == i ? Theme.accent : Color(white: 0.56))
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
-        .sheet(item: $newRoom) { m in NewRoomFlow(mode: m) { selection = $0 } }
-        .onChange(of: model.requestNew) { _, m in if let m { newRoom = m; model.requestNew = nil } }
-        .onChange(of: selection) { _, _ in jump = nil }
-        .onChange(of: model.debugOpen, initial: true) { _, t in
-            guard let t, let s = model.store?.summaries(myDevice: model.myDevice, archived: false).first(where: { $0.room.title == t }) else { return }
-            selection = s.id
-            model.debugOpen = nil
-        }
-        .tint(Theme.accent)
-    }
-}
-
-struct MacSearchResults: View {
-    @Environment(AppModel.self) private var model
-    let query: String
-    var onOpen: (String, String) -> Void
-
-    var body: some View {
-        let _ = model.revision
-        let rooms = (model.store?.summaries(myDevice: model.myDevice, archived: false) ?? []).filter { $0.room.title.localizedCaseInsensitiveContains(query) }
-        let hits = model.store?.search(query) ?? []
-        List {
-            if !rooms.isEmpty {
-                Section("Chats") {
-                    ForEach(rooms) { s in Button { onOpen(s.id, "") } label: { ChatRow(summary: s) }.buttonStyle(.plain) }
-                }
-            }
-            Section("Einträge") {
-                ForEach(hits) { m in Button { onOpen(m.roomId, m.id) } label: { MessageRow(message: m) }.buttonStyle(.plain) }
-            }
-        }
-        .overlay { if hits.isEmpty && rooms.isEmpty { ContentUnavailableView.search(text: query) } }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("tab.\(i)")
+        .accessibilityAddTraits(tab == i ? .isSelected : [])
     }
 }
 #endif
@@ -211,7 +153,7 @@ enum DebugLogin {
         await model.syncNow()
         model.debugShowInfo = env["THREAD_SHOW"] == "info"
         if let open = env["THREAD_OPEN"], !open.isEmpty { model.debugOpen = open }
-        if let show = env["THREAD_SHOW"] { model.debugTab = ["starred": 1, "settings": 2, "search": 3][show] }
+        if let show = env["THREAD_SHOW"] { model.debugTab = ["starred": 1, "settings": 2][show] }
     }
 }
 #endif

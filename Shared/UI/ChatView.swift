@@ -28,6 +28,7 @@ struct ChatView: View {
     @State private var showInfoPush = false
     @State private var firstUnreadSeq: Int?
     @State private var scrollTarget: String?
+    @State private var confirmDeleteRoom = false
 
     enum Sheet: Identifiable {
         case poll, checklist, location, camera, media(Message)
@@ -67,33 +68,16 @@ struct ChatView: View {
                         Button("Frühere Einträge laden") { limit += 300 }.font(.footnote).padding(.vertical, 10)
                     }
                     ForEach(Array(messages.enumerated()), id: \.element.id) { i, m in
-                        let prev = i > 0 ? messages[i - 1] : nil
-                        if prev == nil || !Calendar.current.isDate(prev!.createdAt, inSameDayAs: m.createdAt) {
-                            DayPill(date: m.createdAt).padding(.vertical, 8)
-                        }
-                        if let f = firstUnreadSeq, m.seq == f {
-                            NewFromOtherDeviceLine(count: messages.filter { $0.seq >= f && $0.deviceId != model.myDevice }.count)
-                        }
-                        MessageBubble(message: m, ctx: ctx, highlighted: highlight == m.id,
-                                      compactTop: prev.map { $0.authorId == m.authorId && m.createdAt.timeIntervalSince($0.createdAt) < 1800 } ?? false,
-                                      onReply: { replyTo = $0; editing = nil },
-                                      onJump: { jump(to: $0, proxy) },
-                                      onEdit: { editing = $0; replyTo = nil; text = $0.body },
-                                      onOpenMedia: { sheet = .media($0) })
+                        row(i, m, messages, ctx, proxy)
                     }
                     Color.clear.frame(height: 4).id("bottom")
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, 8)
             }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .background(Theme.chatBackground)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                VStack(spacing: 0) {
-                    if searching { searchBar(hits: hits, proxy: proxy) }
-                    if !pinned.isEmpty && !searching { pinnedBar(pinned, proxy: proxy) }
-                }
-            }
+            .safeAreaInset(edge: .top, spacing: 0) { topBars(room, hits: hits, pinned: pinned, proxy: proxy) }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 InputBar(roomId: roomId, text: $text, replyTo: $replyTo, editing: $editing) { a in
                     switch a {
@@ -114,13 +98,14 @@ struct ChatView: View {
                 if let t { jump(to: t, proxy); scrollTarget = nil }
             }
         }
-        .navigationTitle(room.title)
         #if os(iOS)
+        .navigationTitle(room.title)
         .navigationBarTitleDisplayMode(.inline)
-        #else
-        .navigationSubtitle(room.subtitle)
-        #endif
         .toolbar { toolbar(room) }
+        #endif
+        .confirmationDialog("Wirklich löschen?", isPresented: $confirmDeleteRoom) {
+            Button("Löschen", role: .destructive) { model.deleteRoom(roomId) }
+        } message: { Text("Der Raum und alle Einträge werden auf allen Geräten und auf dem Server gelöscht.") }
         .photosPicker(isPresented: $showPhotos, selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos]))
         .onChange(of: photoItems) { _, items in importPhotos(items) }
         .fileImporter(isPresented: $showFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { r in
@@ -129,7 +114,8 @@ struct ChatView: View {
         .sheet(item: $sheet) { s in sheetView(s) }
         #if os(iOS)
         .navigationDestination(isPresented: $showInfoPush) {
-            RoomInfoView(roomId: roomId, onJump: { id in showInfoPush = false; scrollTarget = id })
+            RoomInfoView(roomId: roomId, onJump: { id in showInfoPush = false; scrollTarget = id },
+                         onSearch: { showInfoPush = false; searching = true })
         }
         #endif
         .onAppear {
@@ -145,45 +131,124 @@ struct ChatView: View {
         .onDisappear { model.markSeen(roomId) }
     }
 
+    /// Eine Zeile des Verlaufs: (iPhone) Datums-Pille bei Tageswechsel, ggf. „Neu von anderem Gerät“, dann die Bubble.
+    @ViewBuilder
+    private func row(_ i: Int, _ m: Message, _ messages: [Message], _ ctx: BubbleContext, _ proxy: ScrollViewProxy) -> some View {
+        let prev = i > 0 ? messages[i - 1] : nil
+        #if os(iOS)
+        if prev == nil || !Calendar.current.isDate(prev!.createdAt, inSameDayAs: m.createdAt) {
+            DayPill(date: m.createdAt).padding(.top, 12).padding(.bottom, 4)
+        }
+        #endif
+        if let f = firstUnreadSeq, m.seq == f {
+            NewFromOtherDeviceLine(count: messages.filter { $0.seq >= f && $0.deviceId != model.myDevice }.count)
+        }
+        let compact = prev.map { $0.authorId == m.authorId && m.createdAt.timeIntervalSince($0.createdAt) < 1800 } ?? false
+        MessageBubble(message: m, ctx: ctx, highlighted: highlight == m.id, compactTop: compact,
+                      onReply: { replyTo = $0; editing = nil },
+                      onJump: { jump(to: $0, proxy) },
+                      onEdit: { editing = $0; replyTo = nil; text = $0.body },
+                      onOpenMedia: { sheet = .media($0) })
+    }
+
+    /// Oben über dem Verlauf: (Mac) Kopfzeile, Suche im Chat, angeheftete Einträge.
+    private func topBars(_ room: Room, hits: [Message], pinned: [Message], proxy: ScrollViewProxy) -> some View {
+        VStack(spacing: 0) {
+            #if os(macOS)
+            macHeader(room)
+            #endif
+            if searching { searchBar(hits: hits, proxy: proxy) }
+            if !pinned.isEmpty && !searching { pinnedBar(pinned, proxy: proxy) }
+        }
+    }
+
+    /// Unterzeile wie im Messenger: „Ich“ bzw. die Mitglieder („Ich, Anna, Ben“).
+    private func subtitle(_ room: Room) -> String {
+        guard room.memberCount > 1, let store = model.store else { return room.subtitle }
+        let names = store.members(room: roomId).map { $0.userId == model.me ? String(localized: "Ich") : $0.displayName }
+        return names.count > 6 ? room.subtitle : names.joined(separator: ", ")
+    }
+
+    #if os(iOS)
     @ToolbarContentBuilder
     private func toolbar(_ room: Room) -> some ToolbarContent {
-        #if os(iOS)
         ToolbarItem(placement: .principal) {
             Button { openInfo() } label: {
                 HStack(spacing: 8) {
-                    Avatar(title: room.title, image: room.avatar, isGroup: room.kind == .group, size: 32, colorKey: room.id)
+                    Avatar(title: room.title, image: room.avatar, isGroup: room.kind == .group, size: 36, colorKey: room.id)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(room.title).font(.headline).lineLimit(1)
-                        Text(room.subtitle)
-                            .font(.caption2).foregroundStyle(.secondary)
+                        Text(room.title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
+                        Text(subtitle(room)).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("chat.header")
         }
-        #else
-        ToolbarItem(placement: .navigation) {
-            Button { openInfo() } label: {
-                Avatar(title: room.title, image: room.avatar, isGroup: room.kind == .group, size: 28, colorKey: room.id)
-            }
-            .buttonStyle(.plain)
-        }
-        #endif
         ToolbarItem(placement: .primaryAction) {
             Button { withAnimation { searching.toggle(); if !searching { query = ""; highlight = nil } } } label: {
                 Label("Im Chat suchen", systemImage: "magnifyingglass")
             }
-            .keyboardShortcut("f", modifiers: .command)
             .accessibilityIdentifier("chat.search")
         }
-        #if os(macOS)
-        ToolbarItem(placement: .primaryAction) {
-            Button { openInfo() } label: { Label("Infos", systemImage: "info.circle") }
-                .keyboardShortcut("i", modifiers: .command)
-        }
-        #endif
     }
+    #else
+    /// Mac-Kopfzeile wie am Desktop-Messenger: Avatar, Name, Unterzeile; rechts Suchen, Infos und „…“.
+    private func macHeader(_ room: Room) -> some View {
+        HStack(spacing: 12) {
+            Button { openInfo() } label: {
+                HStack(spacing: 12) {
+                    Avatar(title: room.title, image: room.avatar, isGroup: room.kind == .group, size: 40, colorKey: room.id)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(room.title).font(.system(size: 16)).foregroundStyle(Theme.text1).lineLimit(1)
+                        Text(subtitle(room)).font(.system(size: 13)).foregroundStyle(Theme.text2).lineLimit(1)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("chat.header")
+            Spacer()
+            headerButton("magnifyingglass", "Im Chat suchen") {
+                withAnimation { searching.toggle(); if !searching { query = ""; highlight = nil } }
+            }
+            .keyboardShortcut("f", modifiers: .command)
+            .accessibilityIdentifier("chat.search")
+            headerButton("sidebar.right", "Infos") { openInfo() }
+                .keyboardShortcut("i", modifiers: .command)
+            Menu {
+                Button { openInfo() } label: { Label("Details", systemImage: "info.circle") }
+                Button { model.setRoomState(roomId, pinned: !room.pinned) } label: {
+                    Label(room.pinned ? "Lösen" : "Anheften", systemImage: room.pinned ? "pin.slash" : "pin")
+                }
+                Button { model.setRoomState(roomId, archived: !room.archived) } label: {
+                    Label(room.archived ? "Zurückholen" : "Archivieren", systemImage: "archivebox")
+                }
+                Divider()
+                Button(role: .destructive) { confirmDeleteRoom = true } label: { Label("Löschen", systemImage: "trash") }
+            } label: {
+                Image(systemName: "ellipsis").rotationEffect(.degrees(90)).font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.text1).frame(width: 30, height: 30).contentShape(Rectangle())
+            }
+            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+            .help(Text("Weitere"))
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 64)
+        .background(Theme.chatBackground)
+        .overlay(alignment: .bottom) { Theme.panelGap.frame(height: 1) }
+    }
+
+    private func headerButton(_ icon: String, _ help: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.text1)
+                .frame(width: 30, height: 30).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(Text(help))
+        .accessibilityLabel(Text(help))
+    }
+    #endif
 
     private func openInfo() {
         if let showInfo { showInfo.wrappedValue.toggle() } else { showInfoPush = true }
@@ -205,9 +270,11 @@ struct ChatView: View {
             Button("Fertig") { searching = false; query = ""; highlight = nil }
         }
         .buttonStyle(.borderless)
-        .padding(.horizontal, 12).padding(.vertical, 8)
-        .htGlass(in: Capsule())
-        .padding(.horizontal, 10).padding(.top, 6)
+        .padding(.horizontal, 10).padding(.vertical, 7)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.searchField))
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(Theme.barBackground)
+        .overlay(alignment: .bottom) { Theme.hairline.frame(height: 0.5) }
     }
 
     private func step(_ hits: [Message], _ d: Int, _ proxy: ScrollViewProxy) {
@@ -246,17 +313,19 @@ struct ChatView: View {
             pinIndex = (pinIndex + 1) % pinned.count
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "pin.fill").foregroundStyle(Theme.pinned).rotationEffect(.degrees(45))
+                RoundedRectangle(cornerRadius: 1).fill(Theme.pinned).frame(width: 2, height: 30)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(pinned.count > 1 ? String(localized: "Angeheftet (\(pinIndex % pinned.count + 1)/\(pinned.count))") : String(localized: "Angeheftet"))
-                        .font(.caption.weight(.semibold)).foregroundStyle(Theme.accent)
+                        .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     PreviewText(message: m).font(.caption).lineLimit(1).foregroundStyle(.primary)
                 }
                 Spacer()
+                Image(systemName: "pin.fill").font(.caption).foregroundStyle(Theme.pinned).rotationEffect(.degrees(45))
             }
-            .padding(.horizontal, 14).padding(.vertical, 8)
-            .htGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .padding(.horizontal, 10).padding(.top, 6)
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .background(Theme.barBackground)
+            .overlay(alignment: .bottom) { Theme.hairline.frame(height: 0.5) }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("chat.pinned")
@@ -314,24 +383,37 @@ nonisolated struct MovieFile: Transferable {
     }
 }
 
+/// iPhone: Datums-Pille je Tag (unscharfer Grund, fett, mittig).
 struct DayPill: View {
     let date: Date
     var body: some View {
         Text(Fmt.dayPill(date))
             .font(.footnote.weight(.semibold))
-            .padding(.horizontal, 12).padding(.vertical, 4)
-            .htGlass(in: Capsule())
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10).padding(.vertical, 3.5)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12.5, style: .continuous))
+            .background(Theme.systemPill, in: RoundedRectangle(cornerRadius: 12.5, style: .continuous))
     }
 }
 
+/// Hinweis mitten im Verlauf: ab hier neu von einem anderen Gerät (dunkle Pille wie Systemhinweise).
 struct NewFromOtherDeviceLine: View {
     let count: Int
     var body: some View {
-        HStack {
-            Rectangle().fill(Theme.accent.opacity(0.4)).frame(height: 1)
-            Text("Neu von anderem Gerät (\(count))").font(.caption.weight(.semibold)).foregroundStyle(Theme.accent).fixedSize()
-            Rectangle().fill(Theme.accent.opacity(0.4)).frame(height: 1)
-        }
-        .padding(.horizontal, 16).padding(.vertical, 8)
+        Text("Neu von anderem Gerät (\(count))")
+            #if os(macOS)
+            .font(.system(size: 12))
+            .foregroundStyle(Theme.text1)
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.systemPill))
+            #else
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Capsule().fill(Theme.systemPill))
+            #endif
+            .fixedSize()
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
     }
 }

@@ -21,6 +21,7 @@ nonisolated final class LocalStore {
           payload TEXT, reply_to TEXT, attachment TEXT, thumb TEXT, created_at REAL, edited_at REAL, pinned INTEGER DEFAULT 0,
           deleted INTEGER DEFAULT 0, seq INTEGER DEFAULT 0, pending INTEGER DEFAULT 0, failed TEXT);
         CREATE INDEX IF NOT EXISTS m_room ON messages(room_id, created_at);
+        CREATE INDEX IF NOT EXISTS m_room_seq ON messages(room_id, seq);
         CREATE TABLE IF NOT EXISTS reactions(message_id TEXT, user_id TEXT, emoji TEXT, active INTEGER, room_id TEXT,
           PRIMARY KEY(message_id, user_id, emoji));
         CREATE TABLE IF NOT EXISTS stars(message_id TEXT PRIMARY KEY, active INTEGER, room_id TEXT);
@@ -138,15 +139,19 @@ nonisolated final class LocalStore {
             FROM rooms r LEFT JOIN roomstate s ON s.room_id=r.id
             WHERE r.deleted=0 AND COALESCE(s.archived,0)=?
             """, archived)
+        // Lesestand, Markierung und Entwürfe aller Räume in einer Abfrage (statt drei je Raum)
+        var kv: [String: String] = [:]
+        for r in db.query("SELECT k, v FROM kv WHERE k LIKE 'read:%' OR k LIKE 'unreadmark:%' OR k LIKE 'draft:%'") { kv[r.s("k")] = r.s("v") }
         return rows.map { r in
             let room = Self.room(r)
             let last = db.one("SELECT * FROM messages WHERE room_id=? AND deleted=0 ORDER BY created_at DESC LIMIT 1", room.id).map(Self.message)
-            let read = Int(get("read:\(room.id)") ?? "0") ?? 0
+            let read = Int(kv["read:\(room.id)"] ?? "0") ?? 0
+            // Index (room_id, seq): zählt nur die Einträge nach dem Lesestand
             let unread = db.one("""
-                SELECT COUNT(*) AS n FROM messages WHERE room_id=? AND deleted=0 AND seq>? AND COALESCE(device_id,'')<>? AND pending=0
+                SELECT COUNT(*) AS n FROM messages WHERE room_id=? AND seq>? AND deleted=0 AND COALESCE(device_id,'')<>? AND pending=0
                 """, room.id, read, myDevice)?.int("n") ?? 0
-            return RoomSummary(room: room, last: last, unread: get("unreadmark:\(room.id)") == "1" ? max(unread, 1) : unread,
-                               draft: get("draft:\(room.id)"))
+            return RoomSummary(room: room, last: last, unread: kv["unreadmark:\(room.id)"] == "1" ? max(unread, 1) : unread,
+                               draft: kv["draft:\(room.id)"])
         }
         .sorted { a, b in
             if a.room.pinned != b.room.pinned { return a.room.pinned }

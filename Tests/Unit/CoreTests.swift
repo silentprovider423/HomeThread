@@ -76,4 +76,53 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(VoiceRecorder.downsample(v, to: 48).count, 48)
         XCTAssertEqual(VoiceRecorder.downsample([0.5, 0.25], to: 48), [0.5, 0.25])
     }
+
+    /// Chat-Liste mit vielen Räumen (wie ein großer Import: 518 Räume, 62.000 Einträge) muss schnell bleiben.
+    @MainActor func testSummariesStayFastWithManyRooms() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ht-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = try LocalStore(root: dir)
+        try store.db.exec("BEGIN")
+        var seq = 0
+        for r in 0..<518 {
+            let rid = String(format: "room-%04d", r)
+            try store.db.run("INSERT INTO rooms(id, kind, title, about, created_by, created_at, updated_at) VALUES(?,?,?,?,?,?,?)",
+                             rid, "group", "Raum \(r)", "", "me", 1.0, 1.0)
+            for m in 0..<120 {
+                seq += 1
+                try store.db.run("INSERT INTO messages(id, room_id, author_id, device_id, kind, body, payload, created_at, seq) VALUES(?,?,?,?,?,?,?,?,?)",
+                                 "\(rid)-\(m)", rid, "me", "dev-other", "text", "Eintrag \(m)", "{}", Double(seq), seq)
+            }
+            store.set("read:\(rid)", String(seq - 3))
+        }
+        try store.db.exec("COMMIT")
+        _ = store.summaries(myDevice: "dev-1", archived: false)
+        let t0 = Date()
+        let list = store.summaries(myDevice: "dev-1", archived: false)
+        let ms = Date().timeIntervalSince(t0) * 1000
+        print("summaries: \(list.count) Räume in \(Int(ms)) ms")
+        XCTAssertEqual(list.count, 518)
+        XCTAssertEqual(list.first?.unread, 3)
+        XCTAssertEqual(list.first?.room.title, "Raum 517", "neuester oben")
+        XCTAssertLessThan(ms, 400)
+    }
+
+    @MainActor func testDesktopStampFormat() {
+        var c = DateComponents(); c.year = 2026; c.month = 11; c.day = 8; c.hour = 12
+        let now = Calendar.current.date(from: c)!
+        let today = now.addingTimeInterval(-3600)
+        XCTAssertEqual(Fmt.stamp(today, now: now), Fmt.time(today))
+        let yesterday = now.addingTimeInterval(-86400)
+        XCTAssertTrue(Fmt.stamp(yesterday, now: now).hasSuffix(", " + Fmt.time(yesterday)))
+        XCTAssertNotEqual(Fmt.stamp(yesterday, now: now), Fmt.stamp(now.addingTimeInterval(-3 * 86400), now: now))
+        let old = now.addingTimeInterval(-400 * 86400)
+        XCTAssertTrue(Fmt.stamp(old, now: now).contains("2025"))
+    }
+
+    @MainActor func testAvatarInitials() {
+        XCTAssertEqual(Avatar.initials("kaufen liste", person: false), "KA")
+        XCTAssertEqual(Avatar.initials("Notizen", person: false), "NO")
+        XCTAssertEqual(Avatar.initials("Alex Morgan", person: true), "AM")
+        XCTAssertEqual(Avatar.initials("🎉", person: false), "")
+    }
 }

@@ -7,6 +7,22 @@
     "%lld": {
       "shouldTranslate": false
     },
+    "%lld Mitglieder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Mitglieder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld members"
+          }
+        }
+      }
+    },
     "%lld neu von anderem Gerät": {
       "localizations": {
         "de": {
@@ -643,6 +659,22 @@
         }
       }
     },
+    "Archivierte Chats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivierte Chats"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archived Chats"
+          }
+        }
+      }
+    },
     "Archivierte Chats erscheinen hier.": {
       "localizations": {
         "de": {
@@ -739,6 +771,22 @@
         }
       }
     },
+    "Bearbeitet %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeitet %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edited %@"
+          }
+        }
+      }
+    },
     "Beenden": {
       "localizations": {
         "de": {
@@ -819,22 +867,6 @@
         }
       }
     },
-    "Bereich": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bereich"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scope"
-          }
-        }
-      }
-    },
     "Beschreibung (optional)": {
       "localizations": {
         "de": {
@@ -895,22 +927,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change Picture"
-          }
-        }
-      }
-    },
-    "Chat": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chat"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chat"
           }
         }
       }
@@ -1251,6 +1267,22 @@
         }
       }
     },
+    "Details": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
     "Die App spricht nur mit deinem Server. Es werden keine Nachrichten an andere verschickt.": {
       "localizations": {
         "de": {
@@ -1491,6 +1523,22 @@
         }
       }
     },
+    "Emoji": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emoji"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emoji"
+          }
+        }
+      }
+    },
     "Entfernen": {
       "localizations": {
         "de": {
@@ -1615,6 +1663,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Creator"
+          }
+        }
+      }
+    },
+    "Fehler": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehler"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
           }
         }
       }
@@ -1827,6 +1891,22 @@
         }
       }
     },
+    "Gestern, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestern, %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday, %@"
+          }
+        }
+      }
+    },
     "Gruppe mit allen Einträgen löschen": {
       "localizations": {
         "de": {
@@ -1839,38 +1919,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete Group and All Entries"
-          }
-        }
-      }
-    },
-    "Gruppe · %lld Personen": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gruppe · %lld Personen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Group · %lld people"
-          }
-        }
-      }
-    },
-    "Gruppe · nur du": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gruppe · nur du"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Group · just you"
           }
         }
       }
@@ -2019,6 +2067,22 @@
         }
       }
     },
+    "Ich": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ich"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Me"
+          }
+        }
+      }
+    },
     "Im Chat suchen": {
       "localizations": {
         "de": {
@@ -2063,22 +2127,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Convert to Group"
-          }
-        }
-      }
-    },
-    "In allen Chats suchen": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In allen Chats suchen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search all chats"
           }
         }
       }
@@ -2339,6 +2387,22 @@
         }
       }
     },
+    "Lege mit ⌘N einen Chat oder mit ⇧⌘N eine Gruppe an.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege mit ⌘N einen Chat oder mit ⇧⌘N eine Gruppe an."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a chat with ⌘N or a group with ⇧⌘N."
+          }
+        }
+      }
+    },
     "Löschen": {
       "localizations": {
         "de": {
@@ -2595,6 +2659,38 @@
         }
       }
     },
+    "Neue Nachricht": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Nachricht"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Message"
+          }
+        }
+      }
+    },
+    "Neue Nachricht…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Nachricht…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New message…"
+          }
+        }
+      }
+    },
     "Neuer Chat": {
       "localizations": {
         "de": {
@@ -2719,22 +2815,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nothing Starred Yet"
-          }
-        }
-      }
-    },
-    "Notiz schreiben …": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notiz schreiben …"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Write a note…"
           }
         }
       }
@@ -3251,6 +3331,22 @@
         }
       }
     },
+    "Suche leeren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche leeren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Search"
+          }
+        }
+      }
+    },
     "Suchen": {
       "localizations": {
         "de": {
@@ -3263,6 +3359,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search"
+          }
+        }
+      }
+    },
+    "Suchen…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search…"
           }
         }
       }
@@ -3295,22 +3407,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Text"
-          }
-        }
-      }
-    },
-    "Texte, Checklisten-Punkte, Antworten, Orte und Dateinamen.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Texte, Checklisten-Punkte, Antworten, Orte und Dateinamen."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Text, checklist items, answers, places and file names."
           }
         }
       }
@@ -3439,6 +3535,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Next"
+          }
+        }
+      }
+    },
+    "Weitere": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
           }
         }
       }
@@ -3583,22 +3695,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show Live Results"
-          }
-        }
-      }
-    },
-    "bearbeitet": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bearbeitet"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "edited"
           }
         }
       }

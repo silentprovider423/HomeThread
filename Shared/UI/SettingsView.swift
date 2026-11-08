@@ -12,7 +12,7 @@ struct SettingsView: View {
             if let s = model.session {
                 Section("Konto") {
                     HStack(spacing: 12) {
-                        Avatar(title: s.user.displayName, size: 48, colorKey: s.user.id)
+                        Avatar(title: s.user.displayName, size: 48, colorKey: s.user.id, person: true)
                         VStack(alignment: .leading) {
                             Text(s.user.displayName).font(.headline)
                             Text("@\(s.user.username)").font(.caption).foregroundStyle(.secondary)

@@ -1,55 +1,53 @@
 import SwiftUI
 
-/// Suche über alle Chats mit Bereichen (Texte, Medien, Orte, Abstimmungen, Checklisten, Gemerkt).
-struct GlobalSearchView: View {
+/// Treffer über alle Chats (Chat-Namen + Einträge), als Inhalt einer Liste – iPhone in der Chat-Liste, Mac in der Seitenspalte.
+struct SearchResults: View {
     @Environment(AppModel.self) private var model
-    @State private var query = ""
-    @State private var scope: LocalStore.SearchScope = .all
+    let query: String
+    var scope: LocalStore.SearchScope = .all
     var onOpen: (String, String) -> Void
+
+    static func rooms(_ model: AppModel, _ q: String) -> [RoomSummary] {
+        q.isEmpty ? [] : model.summaries(archived: false).filter { $0.room.title.localizedCaseInsensitiveContains(q) }
+    }
+
+    static func hasHits(_ model: AppModel, _ q: String, _ scope: LocalStore.SearchScope) -> Bool {
+        !rooms(model, q).isEmpty || !(model.store?.search(q, scope: scope).isEmpty ?? true)
+    }
 
     var body: some View {
         let _ = model.revision
-        let rooms = query.isEmpty ? [] : (model.store?.summaries(myDevice: model.myDevice, archived: false) ?? [])
-            .filter { $0.room.title.localizedCaseInsensitiveContains(query) }
+        let rooms = scope == .all ? Self.rooms(model, query) : []
         let hits = model.store?.search(query, scope: scope) ?? []
-        List {
-            Picker("Bereich", selection: $scope) {
-                Text("Alles").tag(LocalStore.SearchScope.all)
-                Text("Texte").tag(LocalStore.SearchScope.text)
-                Text("Medien").tag(LocalStore.SearchScope.media)
-                Text("Orte").tag(LocalStore.SearchScope.places)
-                Text("Abstimmungen").tag(LocalStore.SearchScope.polls)
-                Text("Checklisten").tag(LocalStore.SearchScope.checklists)
-                Text("Gemerkt").tag(LocalStore.SearchScope.starred)
-            }
-            .pickerStyle(.menu)
-            if !rooms.isEmpty {
-                Section("Chats") {
-                    ForEach(rooms) { s in
-                        Button { onOpen(s.id, "") } label: { ChatRow(summary: s) }.buttonStyle(.plain)
-                    }
-                }
-            }
-            if !hits.isEmpty {
-                Section("Einträge") {
-                    ForEach(hits) { m in
-                        Button { onOpen(m.roomId, m.id) } label: { MessageRow(message: m) }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("search.hit")
-                    }
+        if !rooms.isEmpty {
+            Section("Chats") {
+                ForEach(rooms) { s in
+                    Button { onOpen(s.id, "") } label: { SearchRoomRow(summary: s) }.buttonStyle(.plain)
                 }
             }
         }
-        .overlay {
-            if !query.isEmpty && hits.isEmpty && rooms.isEmpty {
-                ContentUnavailableView.search(text: query)
-            } else if query.isEmpty && scope == .all {
-                ContentUnavailableView("In allen Chats suchen", systemImage: "magnifyingglass",
-                                       description: Text("Texte, Checklisten-Punkte, Antworten, Orte und Dateinamen."))
+        if !hits.isEmpty {
+            Section("Einträge") {
+                ForEach(hits) { m in
+                    Button { onOpen(m.roomId, m.id) } label: { MessageRow(message: m) }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("search.hit")
+                }
             }
         }
-        .searchable(text: $query, prompt: Text("In allen Chats suchen"))
-        .navigationTitle("Suchen")
+    }
+}
+
+/// Kompakte Raum-Zeile in Suchtreffern.
+struct SearchRoomRow: View {
+    let summary: RoomSummary
+    var body: some View {
+        HStack(spacing: 12) {
+            Avatar(title: summary.room.title, image: summary.room.avatar, isGroup: summary.room.kind == .group, size: 36, colorKey: summary.room.id)
+            Text(summary.room.title).font(.body.weight(.semibold)).lineLimit(1)
+            Spacer()
+        }
+        .contentShape(Rectangle())
     }
 }
 
@@ -65,7 +63,10 @@ struct StarredView: View {
             Button { onOpen(m.roomId, m.id) } label: { MessageRow(message: m) }
                 .buttonStyle(.plain)
                 .swipeActions { Button("Nicht mehr merken") { model.toggleStar(m) }.tint(.gray) }
+                .contextMenu { Button { model.toggleStar(m) } label: { Label("Nicht mehr merken", systemImage: "star.slash") } }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .overlay {
             if list.isEmpty {
                 ContentUnavailableView("Noch nichts gemerkt", systemImage: "star",
