@@ -136,6 +136,19 @@ final class LiveServerTests: XCTestCase {
         XCTAssertNotNil(b.store?.fileURL(img.thumb!), "Vorschau wurde geladen")
         let v = try XCTUnwrap(msgs.first { $0.kind == .voice })
         XCTAssertNotNil(b.store?.fileURL(v.attachment!), "Sprachnotiz wurde geladen")
+
+        // Fehlende Vorschau holt die Zelle selbst: einmal laden, auch bei zwei gleichzeitigen Anfragen, ohne Neuaufbau
+        b.store?.removeFile(img.thumb!)
+        XCTAssertNil(b.store?.fileURL(img.thumb!))
+        let rev = b.revision
+        let ref = FileRef(id: img.thumb!, name: "thumb.jpg", mime: "image/jpeg")
+        async let u1 = b.file(ref)
+        async let u2 = b.file(ref)
+        let (f1, f2) = await (u1, u2)
+        XCTAssertNotNil(f1)
+        XCTAssertEqual(f1, f2)
+        XCTAssertNotNil(b.store?.fileURL(img.thumb!), "Vorschau liegt wieder in der Ablage")
+        XCTAssertEqual(b.revision, rev, "Laden einer Datei baut den Verlauf nicht neu auf")
         let items = b.store?.items(message: msgs.last!.id) ?? []
         XCTAssertEqual(items.map(\.text), ["Eins", "Zwei"])
 

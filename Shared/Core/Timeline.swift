@@ -60,6 +60,16 @@ nonisolated struct TimelineRow: Hashable, Identifiable, Sendable {
     /// lokal vorhandene Vorschau bzw. Datei
     var thumbURL: URL?
     var attachmentURL: URL?
+    /// noch nicht geladene Vorschau bzw. Datei: die sichtbare Zelle holt sie selbst (ohne Neuaufbau des Verlaufs)
+    var thumbRef: FileRef?
+    var attachmentRef: FileRef?
+}
+
+/// Datei auf dem Server, die noch nicht auf dem Gerät liegt
+nonisolated struct FileRef: Hashable, Sendable {
+    var id: String
+    var name: String
+    var mime: String
 }
 
 /// Eingaben für den Aufbau im Hintergrund (vom Main-Actor eingesammelt).
@@ -191,6 +201,15 @@ nonisolated final class TimelineLoader: @unchecked Sendable {
             if m.kind == .poll { row.votes = votes[m.id] ?? [:] }
             row.thumbURL = (m.thumb ?? (m.kind == .image ? m.attachment : nil)).flatMap { files[$0] }
             row.attachmentURL = m.attachment.flatMap { files[$0] }
+            if row.thumbURL == nil {
+                if let t = m.thumb { row.thumbRef = FileRef(id: t, name: "thumb.jpg", mime: "image/jpeg") }
+                else if m.kind == .image, let a = m.attachment {
+                    row.thumbRef = FileRef(id: a, name: m.payload.filename ?? "foto.jpg", mime: m.payload.mime ?? "image/jpeg")
+                }
+            }
+            if row.attachmentURL == nil, m.kind == .voice, let a = m.attachment {
+                row.attachmentRef = FileRef(id: a, name: m.payload.filename ?? "sprachnotiz.m4a", mime: m.payload.mime ?? "audio/mp4")
+            }
             return row
         }
     }

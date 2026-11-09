@@ -155,6 +155,26 @@ struct LocalImage: View {
     }
 }
 
+/// Vorschau eines Eintrags. Liegt sie noch nicht auf dem Gerät, holt die sichtbare Zelle sie selbst und tauscht nur
+/// ihren Platzhalter – der Verlauf wird dafür nicht neu aufgebaut (wie Threema: das Bild kommt etwas später, der Chat läuft weiter).
+struct MessageImage: View {
+    @Environment(AppModel.self) private var model
+    let url: URL?
+    let ref: FileRef?
+    var maxPixel = 750
+    /// (Datei-ID, Pfad) – die ID schützt vor einem falschen Bild, wenn die Zelle für einen anderen Eintrag wiederverwendet wird
+    @State private var fetched: (id: String, url: URL)?
+
+    var body: some View {
+        let shown = url ?? fetched.flatMap { $0.id == ref?.id ? $0.url : nil }
+        LocalImage(url: shown, maxPixel: maxPixel)
+            .task(id: ref?.id) {
+                guard url == nil, let ref, fetched?.id != ref.id else { return }
+                if let u = await model.file(ref) { fetched = (ref.id, u) }
+            }
+    }
+}
+
 /// Rundes Bild für Räume/Personen: eigenes Foto oder Initialen in Farbe auf leicht getöntem Kreis.
 struct Avatar: View {
     @Environment(AppModel.self) private var model

@@ -119,7 +119,7 @@ struct MessageBubble: View {
         case .image, .video:
             MediaThumb(row: row).onTapGesture { actions.onOpenMedia(message) }
             if !message.body.isEmpty { Text(message.body).padding(.horizontal, 8) }
-        case .voice: VoiceBubble(message: message, url: row.attachmentURL)
+        case .voice: VoiceBubble(message: message, url: row.attachmentURL, ref: row.attachmentRef)
         case .file: FileBubble(message: message)
         case .location: LocationBubble(message: message)
         case .poll: PollBubble(message: message, votes: row.votes)
@@ -293,7 +293,7 @@ struct MediaThumb: View {
         let ratio = min(max(w / h, 0.6), 1.8)
         ZStack {
             // feste Größe aus den Metadaten, Bild verkleinert im Hintergrund (Vorschau oder Original)
-            LocalImage(url: row.thumbURL, maxPixel: 750)
+            MessageImage(url: row.thumbURL, ref: row.thumbRef, maxPixel: 750)
             if message.kind == .video {
                 Image(systemName: "play.circle.fill").font(.system(size: 44)).foregroundStyle(.white.opacity(0.9))
                     .shadow(radius: 4)
@@ -312,21 +312,35 @@ struct MediaThumb: View {
 }
 
 struct VoiceBubble: View {
+    @Environment(AppModel.self) private var model
     let message: Message
     let url: URL?
+    /// noch nicht geladen: beim Antippen holen und dann abspielen
+    var ref: FileRef?
     @State private var player = VoicePlayer.shared
+    @State private var loading = false
 
     var body: some View {
         let playing = player.playingID == message.id
         HStack(spacing: 10) {
             Button {
-                if let url { player.toggle(id: message.id, url: url) }
+                if let url { player.toggle(id: message.id, url: url); return }
+                guard let ref, !loading else { return }
+                loading = true
+                Task {
+                    if let u = await model.file(ref) { player.toggle(id: message.id, url: u) }
+                    loading = false
+                }
             } label: {
-                Image(systemName: playing ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 34)).foregroundStyle(Theme.accent)
+                if loading {
+                    ProgressView().frame(width: 34, height: 34)
+                } else {
+                    Image(systemName: playing ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 34)).foregroundStyle(Theme.accent)
+                }
             }
             .buttonStyle(.plain)
-            .disabled(url == nil)
+            .disabled(url == nil && ref == nil)
             .accessibilityLabel(Text(playing ? "Pause" : "Abspielen"))
             Waveform(values: message.payload.wave ?? Array(repeating: 0.3, count: 30), progress: playing ? player.progress : 0)
                 .frame(width: 150, height: 26)

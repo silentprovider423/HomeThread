@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import Observation
 import SwiftUI
 
@@ -57,6 +58,25 @@ final class AppModel {
 
     init() {
         if let s = Session.load() { open(s) }
+        watchNetwork()
+    }
+
+    @ObservationIgnored private let pathMonitor = NWPathMonitor()
+    @ObservationIgnored private var online = true
+
+    /// Netz zurück → Warteschlange sofort abschicken (statt auf den nächsten 15-s-Takt bzw. einen hängenden Versuch zu warten)
+    private func watchNetwork() {
+        pathMonitor.pathUpdateHandler = { [weak self] p in
+            let ok = p.status == .satisfied
+            Task { @MainActor in self?.networkChanged(ok) }
+        }
+        pathMonitor.start(queue: .global(qos: .utility))
+    }
+
+    private func networkChanged(_ ok: Bool) {
+        let wasOnline = online
+        online = ok
+        if ok && !wasOnline && session != nil { syncSoon() }
     }
 
     // MARK: Sitzung
@@ -185,6 +205,8 @@ final class AppModel {
                 return
             }
             syncState = e.isNetwork ? .offline : .error(e.localizedDescription)
+            // Netz da, aber Server kurz nicht erreichbar: wartende Einträge nach 5 s erneut versuchen
+            if e.isNetwork && online && store.pendingCount > 0 { retrySoon() }
         } catch {
             syncState = .error(error.localizedDescription)
         }
@@ -195,6 +217,16 @@ final class AppModel {
     }
 
     @ObservationIgnored private var pushedSomething = false
+    @ObservationIgnored private var retryTask: Task<Void, Never>?
+
+    private func retrySoon() {
+        guard retryTask == nil else { return }
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            self?.retryTask = nil
+            self?.syncSoon()
+        }
+    }
 
     /// Warteschlange abarbeiten: erst Dateien hoch, dann Operationen gebündelt.
     private func push(_ api: APIClient, _ store: LocalStore) async throws {
@@ -282,22 +314,43 @@ final class AppModel {
     }
 
     private func downloadMissing(_ api: APIClient, _ store: LocalStore) async {
-        // gesammelt melden (alle 8 Dateien und am Ende) statt nach jeder Datei einen Neuaufbau auszulösen
-        var fresh = 0
-        defer { if fresh > 0 { revision += 1 } }
+        // kein Neuaufbau des Verlaufs: sichtbare Zellen holen ihre Datei selbst (`file(_:)`), alle anderen finden sie beim
+        // nächsten Anzeigen in der Ablage (früher alle 8 Dateien ein kompletter Neuaufbau → Hänger beim Scrollen)
         for f in store.missingDownloads() {
-            let dest = store.plannedFileURL(f.id, name: f.name)
-            do {
-                try await api.getBlob(id: f.id, to: dest)
-                store.registerDownloaded(id: f.id, name: f.name, mime: f.mime)
-                fresh += 1
-                if fresh % 8 == 0 { revision += 1 }
-            } catch let e as APIError where e.status == 404 {
-                continue
-            } catch {
-                return
+            if Task.isCancelled { return }
+            guard await file(FileRef(id: f.id, name: f.name, mime: f.mime)) != nil else {
+                if inflightFailedOffline { return } else { continue }
             }
         }
+    }
+
+    @ObservationIgnored private var inflight: [String: Task<URL?, Never>] = [:]
+    /// letzte Datei scheiterte am Netz (Hintergrund-Laden dann abbrechen statt jede Datei einzeln scheitern zu lassen)
+    @ObservationIgnored private var inflightFailedOffline = false
+
+    /// Datei aus der Ablage oder – einmal je Datei, auch bei mehreren Anfragen gleichzeitig – vom Server.
+    func file(_ ref: FileRef) async -> URL? {
+        guard let store, let api else { return nil }
+        if let u = store.fileURL(ref.id) { return u }
+        if let t = inflight[ref.id] { return await t.value }
+        let dest = store.plannedFileURL(ref.id, name: ref.name)
+        let t = Task<URL?, Never> { @MainActor [weak self] in
+            do {
+                try await api.getBlob(id: ref.id, to: dest)
+                store.registerDownloaded(id: ref.id, name: ref.name, mime: ref.mime)
+                self?.inflightFailedOffline = false
+                return store.fileURL(ref.id)
+            } catch let e as APIError {
+                self?.inflightFailedOffline = e.isNetwork
+                return nil
+            } catch {
+                return nil
+            }
+        }
+        inflight[ref.id] = t
+        let u = await t.value
+        inflight[ref.id] = nil
+        return u
     }
 
     /// Großen Anhang bei Bedarf laden (Video, Datei, Originalfoto).
