@@ -15,7 +15,9 @@ struct ChatView: View {
     @State private var text = ""
     @State private var replyTo: Message?
     @State private var editing: Message?
-    @State private var limit = 200
+    @State private var timeline: ChatTimeline
+    @State private var scrollRequest: ScrollRequest?
+    @State private var confirmDeleteMessage: Message?
     @State private var highlight: String?
     @State private var searching = false
     @State private var query = ""
@@ -26,7 +28,6 @@ struct ChatView: View {
     @State private var showPhotos = false
     @State private var showFiles = false
     @State private var showInfoPush = false
-    @State private var firstUnreadSeq: Int?
     @State private var scrollTarget: String?
     @State private var confirmDeleteRoom = false
 
@@ -43,8 +44,14 @@ struct ChatView: View {
         }
     }
 
+    init(roomId: String, showInfo: Binding<Bool>? = nil, jumpTo: String? = nil) {
+        self.roomId = roomId
+        self.showInfo = showInfo
+        self.jumpTo = jumpTo
+        _timeline = State(initialValue: ChatTimeline(roomId: roomId))
+    }
+
     var body: some View {
-        let _ = model.revision
         if let room = model.store?.room(roomId) {
             chat(room)
         } else {
@@ -54,30 +61,13 @@ struct ChatView: View {
 
     private func chat(_ room: Room) -> some View {
         let store = model.store!
-        let messages = store.messages(room: roomId, limit: limit)
-        let total = store.messageCount(room: roomId)
-        let ctx = BubbleContext(reactions: store.reactions(room: roomId, me: model.me), starred: store.starredIDs(room: roomId),
-                                byID: Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) }), isGroup: room.kind == .group && room.memberCount > 1)
-        let pinned = messages.filter(\.pinned).sorted { $0.createdAt > $1.createdAt }
+        let pinned = timeline.pinned
         let hits = searching && !query.isEmpty ? store.search(query, room: roomId) : []
 
-        return ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    if total > messages.count {
-                        Button("Frühere Einträge laden") { limit += 300 }.font(.footnote).padding(.vertical, 10)
-                    }
-                    ForEach(Array(messages.enumerated()), id: \.element.id) { i, m in
-                        row(i, m, messages, ctx, proxy)
-                    }
-                    Color.clear.frame(height: 4).id("bottom")
-                }
-                .padding(.vertical, 8)
-            }
-            .defaultScrollAnchor(.bottom)
-            .scrollDismissesKeyboard(.interactively)
+        return ChatHistory(model: model, timeline: timeline, version: timeline.version, highlight: highlight,
+                           scrollRequest: scrollRequest, actions: actions)
             .background(Theme.chatBackground)
-            .safeAreaInset(edge: .top, spacing: 0) { topBars(room, hits: hits, pinned: pinned, proxy: proxy) }
+            .safeAreaInset(edge: .top, spacing: 0) { topBars(room, hits: hits, pinned: pinned) }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 InputBar(roomId: roomId, text: $text, replyTo: $replyTo, editing: $editing) { a in
                     switch a {
@@ -90,19 +80,22 @@ struct ChatView: View {
                     }
                 }
             }
-            .onChange(of: messages.last?.id) { _, _ in
-                withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
-                model.markSeen(roomId)
-            }
+            // jede Änderung der Datenbank: Fenster im Hintergrund neu lesen, nur geänderte Zeilen neu zeichnen
+            .onChange(of: model.revision) { _, _ in timeline.reload() }
+            .onChange(of: timeline.lastID) { _, _ in model.markSeen(roomId) }
             .onChange(of: scrollTarget) { _, t in
-                if let t { jump(to: t, proxy); scrollTarget = nil }
+                if let t { jump(to: t); scrollTarget = nil }
             }
-        }
         #if os(iOS)
         .navigationTitle(room.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbar(room) }
         #endif
+        .confirmationDialog("Eintrag auf allen Geräten löschen?",
+                            isPresented: Binding(get: { confirmDeleteMessage != nil }, set: { if !$0 { confirmDeleteMessage = nil } }),
+                            presenting: confirmDeleteMessage) { m in
+            Button("Löschen", role: .destructive) { model.deleteMessage(m) }
+        }
         .confirmationDialog("Wirklich löschen?", isPresented: $confirmDeleteRoom) {
             Button("Löschen", role: .destructive) { model.deleteRoom(roomId) }
         } message: { Text("Der Raum und alle Einträge werden auf allen Geräten und auf dem Server gelöscht.") }
@@ -120,8 +113,7 @@ struct ChatView: View {
         #endif
         .onAppear {
             if text.isEmpty, let d = model.store?.get("draft:\(roomId)") { text = d }
-            let read = Int(model.store?.get("read:\(roomId)") ?? "0") ?? 0
-            firstUnreadSeq = messages.first { $0.seq > read && $0.deviceId != model.myDevice && !$0.pending }?.seq
+            timeline.start(model)
             model.markSeen(roomId)
             if model.debugShowInfo { model.debugShowInfo = false; openInfo() }
             if let j = jumpTo {
@@ -131,34 +123,23 @@ struct ChatView: View {
         .onDisappear { model.markSeen(roomId) }
     }
 
-    /// Eine Zeile des Verlaufs: (iPhone) Datums-Pille bei Tageswechsel, ggf. „Neu von anderem Gerät“, dann die Bubble.
-    @ViewBuilder
-    private func row(_ i: Int, _ m: Message, _ messages: [Message], _ ctx: BubbleContext, _ proxy: ScrollViewProxy) -> some View {
-        let prev = i > 0 ? messages[i - 1] : nil
-        #if os(iOS)
-        if prev == nil || !Calendar.current.isDate(prev!.createdAt, inSameDayAs: m.createdAt) {
-            DayPill(date: m.createdAt).padding(.top, 12).padding(.bottom, 4)
-        }
-        #endif
-        if let f = firstUnreadSeq, m.seq == f {
-            NewFromOtherDeviceLine(count: messages.filter { $0.seq >= f && $0.deviceId != model.myDevice }.count)
-        }
-        let compact = prev.map { $0.authorId == m.authorId && m.createdAt.timeIntervalSince($0.createdAt) < 1800 } ?? false
-        MessageBubble(message: m, ctx: ctx, highlighted: highlight == m.id, compactTop: compact,
-                      onReply: { replyTo = $0; editing = nil },
-                      onJump: { jump(to: $0, proxy) },
+    /// Aktionen der Bubbles (Antworten, Zitat-Sprung, Bearbeiten, Medien, Löschen bestätigen)
+    private var actions: BubbleActions {
+        BubbleActions(onReply: { replyTo = $0; editing = nil },
+                      onJump: { jump(to: $0) },
                       onEdit: { editing = $0; replyTo = nil; text = $0.body },
-                      onOpenMedia: { sheet = .media($0) })
+                      onOpenMedia: { sheet = .media($0) },
+                      onDelete: { confirmDeleteMessage = $0 })
     }
 
     /// Oben über dem Verlauf: (Mac) Kopfzeile, Suche im Chat, angeheftete Einträge.
-    private func topBars(_ room: Room, hits: [Message], pinned: [Message], proxy: ScrollViewProxy) -> some View {
+    private func topBars(_ room: Room, hits: [Message], pinned: [Message]) -> some View {
         VStack(spacing: 0) {
             #if os(macOS)
             macHeader(room)
             #endif
-            if searching { searchBar(hits: hits, proxy: proxy) }
-            if !pinned.isEmpty && !searching { pinnedBar(pinned, proxy: proxy) }
+            if searching { searchBar(hits: hits) }
+            if !pinned.isEmpty && !searching { pinnedBar(pinned) }
         }
     }
 
@@ -254,18 +235,21 @@ struct ChatView: View {
         if let showInfo { showInfo.wrappedValue.toggle() } else { showInfoPush = true }
     }
 
-    private func searchBar(hits: [Message], proxy: ScrollViewProxy) -> some View {
+    private func searchBar(hits: [Message]) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
             TextField("In diesem Chat suchen", text: $query)
                 .textFieldStyle(.plain)
-                .onSubmit { step(hits, 0, proxy) }
-                .onChange(of: query) { _, _ in hitIndex = 0; if let f = hits.first { highlightAndJump(f.id, proxy) } }
+                .onSubmit { step(hits, 0) }
+                .onChange(of: query) { _, q in
+                    hitIndex = 0
+                    if let f = model.store?.search(q, room: roomId).first { highlightAndJump(f.id) }
+                }
                 .accessibilityIdentifier("chat.search.field")
             if !query.isEmpty {
                 Text(hits.isEmpty ? "0" : "\(hitIndex + 1)/\(hits.count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                Button { step(hits, 1, proxy) } label: { Image(systemName: "chevron.up") }.disabled(hits.count < 2)
-                Button { step(hits, -1, proxy) } label: { Image(systemName: "chevron.down") }.disabled(hits.count < 2)
+                Button { step(hits, 1) } label: { Image(systemName: "chevron.up") }.disabled(hits.count < 2)
+                Button { step(hits, -1) } label: { Image(systemName: "chevron.down") }.disabled(hits.count < 2)
             }
             Button("Fertig") { searching = false; query = ""; highlight = nil }
         }
@@ -277,39 +261,36 @@ struct ChatView: View {
         .overlay(alignment: .bottom) { Theme.hairline.frame(height: 0.5) }
     }
 
-    private func step(_ hits: [Message], _ d: Int, _ proxy: ScrollViewProxy) {
+    private func step(_ hits: [Message], _ d: Int) {
         guard !hits.isEmpty else { return }
         hitIndex = (hitIndex + d + hits.count) % hits.count
-        highlightAndJump(hits[hitIndex].id, proxy)
+        highlightAndJump(hits[hitIndex].id)
     }
 
-    private func highlightAndJump(_ id: String, _ proxy: ScrollViewProxy) {
-        highlight = id
-        ensureLoaded(id)
-        withAnimation { proxy.scrollTo(id, anchor: .center) }
-    }
-
-    private func jump(to id: String, _ proxy: ScrollViewProxy) {
-        ensureLoaded(id)
-        highlight = id
-        withAnimation { proxy.scrollTo(id, anchor: .center) }
+    /// Suchtreffer: Fenster bis zum Treffer erweitern, markieren, hinscrollen (Markierung bleibt bis „Fertig“).
+    private func highlightAndJump(_ id: String) {
         Task {
+            _ = await timeline.ensureLoaded(id)
+            highlight = id
+            scrollRequest = ScrollRequest(id: id)
+        }
+    }
+
+    /// Sprung zu einem Eintrag (Zitat, Angeheftet, Info, Suche aus der Liste): kurz markieren.
+    private func jump(to id: String) {
+        Task {
+            guard await timeline.ensureLoaded(id) else { return }
+            highlight = id
+            scrollRequest = ScrollRequest(id: id)
             try? await Task.sleep(for: .seconds(1.6))
             if highlight == id && !searching { withAnimation { highlight = nil } }
         }
     }
 
-    /// Ältere Einträge nachladen, bis der gesuchte dabei ist.
-    private func ensureLoaded(_ id: String) {
-        guard let store = model.store, let m = store.message(id) else { return }
-        let newer = store.db.one("SELECT COUNT(*) AS n FROM messages WHERE room_id=? AND deleted=0 AND created_at>=?", roomId, m.createdAt)?.int("n") ?? 0
-        if newer > limit { limit = newer + 50 }
-    }
-
-    private func pinnedBar(_ pinned: [Message], proxy: ScrollViewProxy) -> some View {
+    private func pinnedBar(_ pinned: [Message]) -> some View {
         let m = pinned[min(pinIndex, pinned.count - 1)]
         return Button {
-            jump(to: m.id, proxy)
+            jump(to: m.id)
             pinIndex = (pinIndex + 1) % pinned.count
         } label: {
             HStack(spacing: 10) {
@@ -385,9 +366,9 @@ nonisolated struct MovieFile: Transferable {
 
 /// iPhone: Datums-Pille je Tag (unscharfer Grund, fett, mittig).
 struct DayPill: View {
-    let date: Date
+    let text: String
     var body: some View {
-        Text(Fmt.dayPill(date))
+        Text(text)
             .font(.footnote.weight(.semibold))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 10).padding(.vertical, 3.5)

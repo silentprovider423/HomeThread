@@ -2,28 +2,44 @@ import MapKit
 import QuickLook
 import SwiftUI
 
-/// Zusammenhang, den jede Bubble braucht (einmal je Raum abgefragt).
-struct BubbleContext {
-    var reactions: [String: [ReactionCount]]
-    var starred: Set<String>
-    var byID: [String: Message]
-    var isGroup: Bool
-}
-
-struct MessageBubble: View {
-    @Environment(AppModel.self) private var model
-    let message: Message
-    let ctx: BubbleContext
-    var highlighted = false
-    var compactTop = false
+/// Aktionen einer Bubble (vom Chat bereitgestellt).
+struct BubbleActions {
     var onReply: (Message) -> Void = { _ in }
     var onJump: (String) -> Void = { _ in }
     var onEdit: (Message) -> Void = { _ in }
     var onOpenMedia: (Message) -> Void = { _ in }
-    @State private var dragX: CGFloat = 0
-    @State private var confirmDelete = false
+    /// Löschen bestätigen (ein Dialog im Chat statt einem je Bubble)
+    var onDelete: (Message) -> Void = { _ in }
+}
 
-    var mine: Bool { message.authorId == model.me }
+/// Eine Zeile des Verlaufs: (iPhone) Datums-Pille bei Tageswechsel, ggf. „Neu von anderem Gerät“, dann die Bubble.
+struct TimelineRowView: View {
+    let row: TimelineRow
+    var highlighted = false
+    var actions = BubbleActions()
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let pill = row.dayPill {
+                DayPill(text: pill).padding(.top, 12).padding(.bottom, 4)
+            }
+            if let n = row.unreadCount { NewFromOtherDeviceLine(count: n) }
+            MessageBubble(row: row, highlighted: highlighted, actions: actions)
+        }
+        .tint(Theme.accent)
+        .id(row.id)
+    }
+}
+
+/// Bubble eines Eintrags. Alle Daten kommen vorbereitet aus `TimelineRow` – kein Datenbankzugriff beim Zeichnen.
+struct MessageBubble: View {
+    @Environment(AppModel.self) private var model
+    let row: TimelineRow
+    var highlighted = false
+    var actions = BubbleActions()
+
+    var message: Message { row.message }
+    var mine: Bool { row.mine }
     #if os(macOS)
     static let padV: CGFloat = 8, padH: CGFloat = 10
     static let textFont = Font.system(size: 14)
@@ -44,50 +60,24 @@ struct MessageBubble: View {
             if mine { Spacer(minLength: 40) }
             VStack(alignment: mine ? .trailing : .leading, spacing: 3) {
                 bubble
-                if let r = ctx.reactions[message.id], !r.isEmpty { reactionPills(r) }
+                if !row.reactions.isEmpty { reactionPills(row.reactions) }
             }
             if !mine { Spacer(minLength: 40) }
         }
         #if os(macOS)
         .padding(.horizontal, 14)
-        .padding(.top, compactTop ? 4 : 8)
+        .padding(.top, row.compactTop ? 4 : 8)
         #else
         .padding(.horizontal, 8)
-        .padding(.top, compactTop ? 2 : 6)
+        .padding(.top, row.compactTop ? 2 : 6)
         #endif
-        .offset(x: dragX)
-        .overlay(alignment: .leading) {
-            if dragX > 20 {
-                Image(systemName: "arrowshape.turn.up.left.circle.fill").font(.title2).foregroundStyle(Theme.accent)
-                    .opacity(min(1, dragX / 55)).padding(.leading, 4)
-            }
-        }
-        #if os(iOS)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 24)
-                .onChanged { v in
-                    if abs(v.translation.width) > abs(v.translation.height) * 1.5, v.translation.width > 0 {
-                        dragX = min(80, v.translation.width)
-                    }
-                }
-                .onEnded { _ in
-                    if dragX >= 55 { onReply(message) }
-                    withAnimation(.spring(duration: 0.25)) { dragX = 0 }
-                }
-        )
-        #endif
-        .confirmationDialog("Eintrag auf allen Geräten löschen?", isPresented: $confirmDelete) {
-            Button("Löschen", role: .destructive) { model.deleteMessage(message) }
-        }
-        .id(message.id)
     }
 
     private var bubble: some View {
         VStack(alignment: .trailing, spacing: 4) {
             VStack(alignment: .leading, spacing: 6) {
-                if ctx.isGroup && !mine {
-                    Text(model.user(message.authorId)?.displayName ?? String(localized: "Person"))
-                        .font(.caption.weight(.semibold)).foregroundStyle(Theme.color(for: message.authorId))
+                if let name = row.authorName {
+                    Text(name).font(.caption.weight(.semibold)).foregroundStyle(Theme.color(for: message.authorId))
                 }
                 if let r = message.replyTo { quote(r) }
                 content
@@ -119,7 +109,7 @@ struct MessageBubble: View {
     private var content: some View {
         switch message.kind {
         case .text:
-            Text(Self.rich(message.body))
+            Text(row.rich?.value ?? AttributedString(message.body))
                 .textSelection(.enabled)
                 .font(Self.textFont)
                 .foregroundStyle(Theme.text1Bubble)
@@ -127,22 +117,21 @@ struct MessageBubble: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("bubble.text.\(message.body.prefix(40))")
         case .image, .video:
-            MediaThumb(message: message).onTapGesture { onOpenMedia(message) }
+            MediaThumb(row: row).onTapGesture { actions.onOpenMedia(message) }
             if !message.body.isEmpty { Text(message.body).padding(.horizontal, 8) }
-        case .voice: VoiceBubble(message: message)
+        case .voice: VoiceBubble(message: message, url: row.attachmentURL)
         case .file: FileBubble(message: message)
         case .location: LocationBubble(message: message)
-        case .poll: PollBubble(message: message)
-        case .checklist: ChecklistBubble(message: message)
+        case .poll: PollBubble(message: message, votes: row.votes)
+        case .checklist: ChecklistBubble(message: message, items: row.items)
         }
     }
 
     private var meta: some View {
         HStack(spacing: 4) {
-            if ctx.starred.contains(message.id) { Image(systemName: "star.fill").foregroundStyle(Theme.star) }
-            if let d = message.deviceId, d != model.myDevice {
-                Image(systemName: model.devices[d]?.platform == "mac" ? "laptopcomputer" : "iphone")
-                    .accessibilityLabel(Text("von anderem Gerät"))
+            if row.starred { Image(systemName: "star.fill").foregroundStyle(Theme.star) }
+            if let sym = row.deviceSymbol {
+                Image(systemName: sym).accessibilityLabel(Text("von anderem Gerät"))
             }
             Text(stampText).monospacedDigit()
             if message.failed != nil {
@@ -176,12 +165,12 @@ struct MessageBubble: View {
     }
 
     private func quote(_ id: String) -> some View {
-        let q = ctx.byID[id] ?? model.store?.message(id)
-        return Button { onJump(id) } label: {
+        let q = row.quote
+        return Button { actions.onJump(id) } label: {
             HStack(spacing: 8) {
                 RoundedRectangle(cornerRadius: 1).fill(quoteColor(q)).frame(width: 2)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(q.flatMap { model.user($0.authorId)?.displayName } ?? String(localized: "Eintrag"))
+                    Text(row.quoteAuthor ?? (q != nil && q?.authorId == model.me ? model.session?.user.displayName : nil) ?? String(localized: "Eintrag"))
                         .font(.caption.weight(.bold)).foregroundStyle(quoteColor(q))
                     Group {
                         if let q, !q.deleted { PreviewText(message: q) } else {
@@ -199,7 +188,7 @@ struct MessageBubble: View {
     }
 
     private func quoteColor(_ q: Message?) -> Color {
-        guard let q, ctx.isGroup, q.authorId != model.me else { return Theme.accent }
+        guard let q, row.isGroup, q.authorId != model.me else { return Theme.accent }
         return Theme.color(for: q.authorId)
     }
 
@@ -223,28 +212,6 @@ struct MessageBubble: View {
         .font(.callout)
     }
 
-    /// Links (auch nackte Adressen) und einfache Hervorhebungen (**fett**, _kursiv_) anzeigen, Text sonst unverändert lassen.
-    static func rich(_ s: String) -> AttributedString {
-        if let c = richCache.object(forKey: s as NSString) { return c.value }
-        var a = (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
-        let plain = String(a.characters)
-        if plain.contains("."), let det = linkDetector {
-            var from = a.startIndex
-            for m in det.matches(in: plain, range: NSRange(plain.startIndex..., in: plain)) {
-                guard let url = m.url, let r = Range(m.range, in: plain), from < a.endIndex,
-                      let ar = a[from...].range(of: String(plain[r])) else { continue }
-                if a[ar].link == nil { a[ar].link = url }
-                from = ar.upperBound
-            }
-        }
-        richCache.setObject(RichBox(value: a), forKey: s as NSString)
-        return a
-    }
-
-    private final class RichBox { let value: AttributedString; init(value: AttributedString) { self.value = value } }
-    nonisolated(unsafe) private static let richCache: NSCache<NSString, RichBox> = { let c = NSCache<NSString, RichBox>(); c.countLimit = 3000; return c }()
-    nonisolated(unsafe) private static let linkDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-
     static let quickReactions = ["👍", "👎", "❤️", "😂", "😢", "🙏"]
     static let moreReactions = ["🎉", "🔥", "✅", "❓", "👀", "💡", "⭐️", "😮"]
 
@@ -261,14 +228,14 @@ struct MessageBubble: View {
         } label: { Label("Weitere Reaktionen", systemImage: "face.smiling") }
         Divider()
         Button { model.toggleStar(message) } label: {
-            ctx.starred.contains(message.id) ? Label("Nicht mehr merken", systemImage: "star.slash") : Label("Merken", systemImage: "star")
+            row.starred ? Label("Nicht mehr merken", systemImage: "star.slash") : Label("Merken", systemImage: "star")
         }
         if message.failed != nil {
             Button { model.retry(message) } label: { Label("Erneut versuchen", systemImage: "arrow.clockwise") }
         }
-        Button { onReply(message) } label: { Label("Darauf antworten", systemImage: "arrowshape.turn.up.left") }
+        Button { actions.onReply(message) } label: { Label("Darauf antworten", systemImage: "arrowshape.turn.up.left") }
         if message.kind == .text && mine {
-            Button { onEdit(message) } label: { Label("Bearbeiten", systemImage: "pencil") }
+            Button { actions.onEdit(message) } label: { Label("Bearbeiten", systemImage: "pencil") }
         }
         Button { model.togglePin(message) } label: {
             message.pinned ? Label("Lösen", systemImage: "pin.slash") : Label("Oben anheften", systemImage: "pin")
@@ -277,7 +244,7 @@ struct MessageBubble: View {
         if message.kind == .text || message.kind == .checklist || message.kind == .poll {
             Button { Clipboard.copy(model.store?.searchText(message) ?? message.body) } label: { Label("Kopieren", systemImage: "doc.on.doc") }
         }
-        if message.kind == .image, let a = message.attachment, let u = model.store?.fileURL(a) {
+        if message.kind == .image, let u = row.attachmentURL {
             Button { Clipboard.copyImage(u) } label: { Label("Kopieren", systemImage: "doc.on.doc") }
         }
         if let item = shareItem {
@@ -289,13 +256,10 @@ struct MessageBubble: View {
             Button { model.closePoll(message) } label: { Label("Abstimmung beenden", systemImage: "checkmark.seal") }
         }
         Divider()
-        Button(role: .destructive) { confirmDelete = true } label: { Label("Löschen", systemImage: "trash") }
+        Button(role: .destructive) { actions.onDelete(message) } label: { Label("Löschen", systemImage: "trash") }
     }
 
-    private var shareItem: URL? {
-        guard let a = message.attachment else { return nil }
-        return model.store?.fileURL(a)
-    }
+    private var shareItem: URL? { row.attachmentURL }
 }
 
 /// Zwischenablage für iPhone und Mac.
@@ -321,15 +285,15 @@ enum Clipboard {
 // MARK: - Inhalte der Bubbles
 
 struct MediaThumb: View {
-    @Environment(AppModel.self) private var model
-    let message: Message
+    let row: TimelineRow
 
     var body: some View {
-        let _ = model.revision
+        let message = row.message
         let w = CGFloat(max(1, message.payload.w ?? 4)), h = CGFloat(max(1, message.payload.h ?? 3))
         let ratio = min(max(w / h, 0.6), 1.8)
         ZStack {
-            LocalImage(url: (message.thumb ?? message.attachment).flatMap { model.store?.fileURL($0) }, maxPixel: 700)
+            // feste Größe aus den Metadaten, Bild verkleinert im Hintergrund (Vorschau oder Original)
+            LocalImage(url: row.thumbURL, maxPixel: 750)
             if message.kind == .video {
                 Image(systemName: "play.circle.fill").font(.system(size: 44)).foregroundStyle(.white.opacity(0.9))
                     .shadow(radius: 4)
@@ -348,13 +312,11 @@ struct MediaThumb: View {
 }
 
 struct VoiceBubble: View {
-    @Environment(AppModel.self) private var model
     let message: Message
+    let url: URL?
     @State private var player = VoicePlayer.shared
 
     var body: some View {
-        let _ = model.revision
-        let url = message.attachment.flatMap { model.store?.fileURL($0) }
         let playing = player.playingID == message.id
         HStack(spacing: 10) {
             Button {
@@ -504,10 +466,9 @@ struct MapSnapshot: View {
 struct PollBubble: View {
     @Environment(AppModel.self) private var model
     let message: Message
+    let votes: [String: [String]]
 
     var body: some View {
-        let _ = model.revision
-        let votes = model.store?.votes(message: message.id) ?? [:]
         let mineVote = Set(votes[model.me] ?? [])
         let closed = message.payload.closed == true
         let showCounts = closed || message.payload.showInterim != false
@@ -573,13 +534,12 @@ struct PollBubble: View {
 struct ChecklistBubble: View {
     @Environment(AppModel.self) private var model
     let message: Message
+    let items: [ChecklistItem]
     @State private var newItem = ""
     @State private var hideDone = false
     @FocusState private var adding: Bool
 
     var body: some View {
-        let _ = model.revision
-        let items = model.store?.items(message: message.id) ?? []
         let done = items.filter(\.done).count
         VStack(alignment: .leading, spacing: 6) {
             HStack {

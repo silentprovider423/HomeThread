@@ -171,6 +171,7 @@ final class AppModel {
     private func syncOnce() async {
         guard let api, let store, session != nil else { return }
         syncState = .syncing
+        let before = store.pendingCount
         do {
             try await push(api, store)
             try await pull(api, store)
@@ -188,8 +189,12 @@ final class AppModel {
             syncState = .error(error.localizedDescription)
         }
         pending = store.pendingCount
-        revision += 1
+        // Ansichten nur neu abfragen lassen, wenn sich lokal etwas geändert hat (früher: alle 15 s ein kompletter Neuaufbau)
+        if pending != before || pushedSomething { revision += 1 }
+        pushedSomething = false
     }
+
+    @ObservationIgnored private var pushedSomething = false
 
     /// Warteschlange abarbeiten: erst Dateien hoch, dann Operationen gebündelt.
     private func push(_ api: APIClient, _ store: LocalStore) async throws {
@@ -214,6 +219,7 @@ final class AppModel {
             var byID: [String: [String: Any]] = [:]
             for r in results { if let id = r["op_id"] as? String { byID[id] = r } }
             var retryLater = false
+            pushedSomething = true
             for (row, op) in zip(batch, ops) {
                 let res = byID[row.s("op_id")] ?? [:]
                 let ok = res["ok"] as? Bool ?? false
@@ -276,12 +282,16 @@ final class AppModel {
     }
 
     private func downloadMissing(_ api: APIClient, _ store: LocalStore) async {
+        // gesammelt melden (alle 8 Dateien und am Ende) statt nach jeder Datei einen Neuaufbau auszulösen
+        var fresh = 0
+        defer { if fresh > 0 { revision += 1 } }
         for f in store.missingDownloads() {
             let dest = store.plannedFileURL(f.id, name: f.name)
             do {
                 try await api.getBlob(id: f.id, to: dest)
                 store.registerDownloaded(id: f.id, name: f.name, mime: f.mime)
-                revision += 1
+                fresh += 1
+                if fresh % 8 == 0 { revision += 1 }
             } catch let e as APIError where e.status == 404 {
                 continue
             } catch {

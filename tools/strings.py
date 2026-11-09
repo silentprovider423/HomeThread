@@ -73,8 +73,8 @@ EN = {
     "Gruppen-Info": "Group Info", "Halte einen Eintrag gedrückt und wähle „Merken“.": "Touch and hold an entry and choose “Star”.",
     "Hell": "Light", "Heruntergeladene Dateien": "Downloaded Files", "Heruntergeladene Dateien entfernen": "Remove Downloaded Files",
     "Heute": "Today", "HomeThread": "HomeThread",
-    "HomeThread ist ein unabhängiges Open-Source-Projekt (MIT-Lizenz). Es verschickt nichts an andere – Chats und Gruppen sind Notiz-Räume auf deinem eigenen Server.":
-        "HomeThread is an independent open-source project (MIT license). It never sends anything to other people – chats and groups are note rooms on your own server.",
+    "HomeThread ist ein unabhängiges Open-Source-Projekt (GPLv3-Lizenz). Es verschickt nichts an andere – Chats und Gruppen sind Notiz-Räume auf deinem eigenen Server.":
+        "HomeThread is an independent open-source project (GPLv3 license). It never sends anything to other people – chats and groups are note rooms on your own server.",
     "Im Chat suchen": "Search in Chat", "In Chat umwandeln": "Convert to Chat", "In Gruppe umwandeln": "Convert to Group",
     "In allen Chats suchen": "Search all chats", "In der Liste oben anheften": "Pin to Top of List",
     "In diesem Chat suchen": "Search this chat", "Infos": "Info", "Inhalte": "Contents",

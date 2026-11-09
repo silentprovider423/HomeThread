@@ -131,16 +131,26 @@ struct LocalImage: View {
     let url: URL?
     var maxPixel = 600
     var contentMode: ContentMode = .fill
+    @State private var loaded: (URL, PlatformImage)?
 
     var body: some View {
-        if let url, let img = ImageCache.shared.image(url, maxPixel: maxPixel) {
-            #if os(iOS)
-            Image(uiImage: img).resizable().aspectRatio(contentMode: contentMode)
-            #else
-            Image(nsImage: img).resizable().aspectRatio(contentMode: contentMode)
-            #endif
-        } else {
-            Rectangle().fill(.quaternary).overlay(ProgressView().controlSize(.small))
+        // aus dem Speicher sofort, sonst im Hintergrund verkleinern (nie Dekodieren auf dem Main-Thread)
+        let img = url.flatMap { u in loaded?.0 == u ? loaded?.1 : ImageLoader.shared.cached(u, maxPixel: maxPixel) }
+        ZStack {
+            if let img {
+                #if os(iOS)
+                Image(uiImage: img).resizable().aspectRatio(contentMode: contentMode)
+                #else
+                Image(nsImage: img).resizable().aspectRatio(contentMode: contentMode)
+                #endif
+            } else {
+                Rectangle().fill(.quaternary)
+                if maxPixel > 1000 || url == nil { ProgressView().controlSize(.small) }
+            }
+        }
+        .task(id: url) {
+            guard let url, img == nil else { return }
+            if let i = await ImageLoader.shared.load(url, maxPixel: maxPixel) { loaded = (url, i) }
         }
     }
 }

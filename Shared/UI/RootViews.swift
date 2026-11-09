@@ -134,6 +134,7 @@ struct AppRoot: View {
 ///   THREAD_RESET=1      lokale Daten vorher löschen
 ///   THREAD_OPEN=<Titel> diesen Chat öffnen (Screenshots)
 ///   THREAD_APPEARANCE=1|2  hell/dunkel erzwingen
+///   THREAD_PERF_SEED=1  synthetische Leistungsdaten (nur lokal, siehe PerfSeed)
 enum DebugLogin {
     static func run(_ model: AppModel) async {
         let env = ProcessInfo.processInfo.environment
@@ -151,6 +152,12 @@ enum DebugLogin {
             try? await model.login(server: server, username: u, password: p, code: code)
         }
         await model.syncNow()
+        if env["THREAD_PERF_SEED"] == "1" {
+            PerfSeed.run(model)
+            #if os(iOS)
+            FrameMonitor.shared.start()
+            #endif
+        }
         model.debugShowInfo = env["THREAD_SHOW"] == "info"
         if let open = env["THREAD_OPEN"], !open.isEmpty { model.debugOpen = open }
         if let show = env["THREAD_SHOW"] { model.debugTab = ["starred": 1, "settings": 2][show] }

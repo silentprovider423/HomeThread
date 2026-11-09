@@ -66,7 +66,7 @@ struct SettingsView: View {
             }
             Section("Über") {
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–")
-                Text("HomeThread ist ein unabhängiges Open-Source-Projekt (MIT-Lizenz). Es verschickt nichts an andere – Chats und Gruppen sind Notiz-Räume auf deinem eigenen Server.")
+                Text("HomeThread ist ein unabhängiges Open-Source-Projekt (GPLv3-Lizenz). Es verschickt nichts an andere – Chats und Gruppen sind Notiz-Räume auf deinem eigenen Server.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             if model.session != nil {

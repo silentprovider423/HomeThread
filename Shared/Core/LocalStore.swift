@@ -33,6 +33,8 @@ nonisolated final class LocalStore {
         CREATE TABLE IF NOT EXISTS outbox(n INTEGER PRIMARY KEY AUTOINCREMENT, op_id TEXT, kind TEXT, body TEXT,
           attempts INTEGER DEFAULT 0, last_error TEXT);
         CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY, name TEXT, mime TEXT, size INTEGER, uploaded INTEGER DEFAULT 0);
+        CREATE INDEX IF NOT EXISTS i_room ON items(room_id);
+        CREATE INDEX IF NOT EXISTS r_room ON reactions(room_id);
         """)
         do {
             try db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(id UNINDEXED, room_id UNINDEXED, body, tokenize='unicode61 remove_diacritics 2')")
@@ -133,24 +135,30 @@ nonisolated final class LocalStore {
     }
 
     func summaries(myDevice: String, archived: Bool) -> [RoomSummary] {
+        // Zwei Abfragen für alle Räume statt zwei je Raum (518 Räume = 1.036 Abfragen bei jedem Neuaufbau)
         let rows = db.query("""
             SELECT r.*, COALESCE(s.pinned,0) AS rs_pinned, COALESCE(s.archived,0) AS rs_archived, COALESCE(s.muted,0) AS rs_muted,
-              (SELECT COUNT(*) FROM members m WHERE m.room_id=r.id AND m.removed=0) AS mcount
+              (SELECT COUNT(*) FROM members m WHERE m.room_id=r.id AND m.removed=0) AS mcount,
+              (SELECT rowid FROM messages WHERE room_id=r.id AND deleted=0 ORDER BY created_at DESC LIMIT 1) AS last_rowid,
+              (SELECT COUNT(*) FROM messages WHERE room_id=r.id
+                 AND seq>COALESCE((SELECT CAST(v AS INTEGER) FROM kv WHERE k='read:'||r.id),0)
+                 AND deleted=0 AND COALESCE(device_id,'')<>? AND pending=0) AS unread
             FROM rooms r LEFT JOIN roomstate s ON s.room_id=r.id
             WHERE r.deleted=0 AND COALESCE(s.archived,0)=?
-            """, archived)
-        // Lesestand, Markierung und Entwürfe aller Räume in einer Abfrage (statt drei je Raum)
+            """, myDevice, archived)
         var kv: [String: String] = [:]
-        for r in db.query("SELECT k, v FROM kv WHERE k LIKE 'read:%' OR k LIKE 'unreadmark:%' OR k LIKE 'draft:%'") { kv[r.s("k")] = r.s("v") }
+        for r in db.query("SELECT k, v FROM kv WHERE k LIKE 'unreadmark:%' OR k LIKE 'draft:%'") { kv[r.s("k")] = r.s("v") }
+        var last: [Int: Message] = [:]
+        let rowids = rows.map { $0.int("last_rowid") }.filter { $0 > 0 }
+        for chunk in stride(from: 0, to: rowids.count, by: 500) {
+            let part = Array(rowids[chunk..<min(chunk + 500, rowids.count)])
+            let q = "SELECT rowid AS _rid, * FROM messages WHERE rowid IN (" + part.map { _ in "?" }.joined(separator: ",") + ")"
+            for r in db.queryArgs(q, part) { last[r.int("_rid")] = Self.message(r) }
+        }
         return rows.map { r in
             let room = Self.room(r)
-            let last = db.one("SELECT * FROM messages WHERE room_id=? AND deleted=0 ORDER BY created_at DESC LIMIT 1", room.id).map(Self.message)
-            let read = Int(kv["read:\(room.id)"] ?? "0") ?? 0
-            // Index (room_id, seq): zählt nur die Einträge nach dem Lesestand
-            let unread = db.one("""
-                SELECT COUNT(*) AS n FROM messages WHERE room_id=? AND seq>? AND deleted=0 AND COALESCE(device_id,'')<>? AND pending=0
-                """, room.id, read, myDevice)?.int("n") ?? 0
-            return RoomSummary(room: room, last: last, unread: kv["unreadmark:\(room.id)"] == "1" ? max(unread, 1) : unread,
+            let unread = r.int("unread")
+            return RoomSummary(room: room, last: last[r.int("last_rowid")], unread: kv["unreadmark:\(room.id)"] == "1" ? max(unread, 1) : unread,
                                draft: kv["draft:\(room.id)"])
         }
         .sorted { a, b in

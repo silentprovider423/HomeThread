@@ -134,7 +134,7 @@ tools/        icon generator, string catalog builder, demo data, screenshots
 
 ## License
 
-[MIT](LICENSE).
+[GPL-3.0](LICENSE) (GNU General Public License v3.0; releases up to this change were published under MIT).
 
 <!-- home-apps:start -->
 ## More Home apps
