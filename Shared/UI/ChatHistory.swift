@@ -59,6 +59,7 @@ struct ChatHistory: UIViewRepresentable {
         private var heightWidth: CGFloat = 0
         private var positioned = false
         private let replyArrow = UIImageView(image: UIImage(systemName: "arrowshape.turn.up.left.circle.fill"))
+        private let detailsArrow = UIImageView(image: UIImage(systemName: "info.circle.fill"))
         private var swipeCell: UITableViewCell?
         private var swipeID: String?
 
@@ -95,6 +96,10 @@ struct ChatHistory: UIViewRepresentable {
             replyArrow.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .title2)
             replyArrow.alpha = 0
             t.addSubview(replyArrow)
+            detailsArrow.tintColor = UIColor(Theme.accent)
+            detailsArrow.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .title2)
+            detailsArrow.alpha = 0
+            t.addSubview(detailsArrow)
         }
 
         private func configure(_ cell: UITableViewCell, _ row: TimelineRow) {
@@ -323,10 +328,40 @@ struct ChatHistory: UIViewRepresentable {
 
         // MARK: Wischen zum Antworten
 
+        // MARK: Menü beim langen Drücken (Reaktionsleiste + Aktionen)
+
+        func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+            guard let id = dataSource?.itemIdentifier(for: indexPath), rows[id] != nil else { return nil }
+            return UIContextMenuConfiguration(identifier: id as NSString, previewProvider: nil) { [weak self] _ in
+                guard let self, let row = self.rows[id], let model = self.model else { return nil }
+                return MessageMenuBuilder.uiMenu(row: row, model: model, actions: self.actions, presenter: self.table)
+            }
+        }
+
+        func tableView(_ tableView: UITableView, previewForHighlightingContextMenuWithConfiguration c: UIContextMenuConfiguration) -> UITargetedPreview? {
+            menuPreview(c)
+        }
+
+        func tableView(_ tableView: UITableView, previewForDismissingContextMenuWithConfiguration c: UIContextMenuConfiguration) -> UITargetedPreview? {
+            menuPreview(c)
+        }
+
+        /// Nur die Bubble anheben, nicht die ganze Zeile
+        private func menuPreview(_ c: UIContextMenuConfiguration) -> UITargetedPreview? {
+            guard let id = c.identifier as? String, let ip = dataSource?.indexPath(for: id), let cell = table?.cellForRow(at: ip),
+                  cell.window != nil else { return nil }
+            let p = UIPreviewParameters()
+            p.backgroundColor = .clear
+            if let f = BubbleFrames.frames[id], !f.isEmpty {
+                p.visiblePath = UIBezierPath(roundedRect: f, cornerRadius: Theme.bubbleRadius)
+            }
+            return UITargetedPreview(view: cell.contentView, parameters: p)
+        }
+
         func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
             guard let pan = g as? UIPanGestureRecognizer, let v = pan.view else { return false }
             let vel = pan.velocity(in: v)
-            return vel.x > 0 && abs(vel.x) > abs(vel.y) * 1.5
+            return abs(vel.x) > abs(vel.y) * 1.5
         }
 
         @objc private func swipe(_ g: UIPanGestureRecognizer) {
@@ -339,22 +374,31 @@ struct ChatHistory: UIViewRepresentable {
                 swipeID = dataSource?.itemIdentifier(for: ip)
             case .changed:
                 guard let cell = swipeCell else { return }
-                let x = min(80, max(0, g.translation(in: table).x))
+                // nach rechts = antworten, nach links = Details
+                let x = min(80, max(-80, g.translation(in: table).x))
                 cell.contentView.transform = CGAffineTransform(translationX: x, y: 0)
                 replyArrow.sizeToFit()
                 replyArrow.center = CGPoint(x: 4 + replyArrow.bounds.width / 2, y: cell.frame.maxY - 26)
                 replyArrow.alpha = x > 20 ? min(1, x / 55) : 0
                 table.bringSubviewToFront(replyArrow)
+                detailsArrow.sizeToFit()
+                detailsArrow.center = CGPoint(x: table.bounds.width - 4 - detailsArrow.bounds.width / 2, y: cell.frame.maxY - 26)
+                detailsArrow.alpha = x < -20 ? min(1, -x / 55) : 0
+                table.bringSubviewToFront(detailsArrow)
             default:
                 guard let cell = swipeCell else { return }
                 let x = g.translation(in: table).x
                 if g.state == .ended, x >= 55, let id = swipeID, let m = rows[id]?.message {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     actions.onReply(m)
+                } else if g.state == .ended, x <= -55, let id = swipeID, let m = rows[id]?.message {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    actions.onDetails(m)
                 }
                 UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0) {
                     cell.contentView.transform = .identity
                     self.replyArrow.alpha = 0
+                    self.detailsArrow.alpha = 0
                 }
                 swipeCell = nil
                 swipeID = nil

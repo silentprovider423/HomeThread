@@ -322,6 +322,21 @@ nonisolated final class LocalStore {
 
     var pendingCount: Int { db.one("SELECT COUNT(*) AS n FROM outbox")?.int("n") ?? 0 }
 
+    /// Eintrag, der noch nicht beim Server ist, aus der Warteschlange nehmen (Anlegen + Hochladen seiner Dateien).
+    /// Liefert true, wenn das Anlegen noch wartete.
+    func dropQueuedCreate(message id: String, files: [String]) -> Bool {
+        var dropped = false
+        for r in db.query("SELECT n, body FROM outbox WHERE kind='op' AND body LIKE ?", "%\(id)%") {
+            guard let o = (try? JSONSerialization.jsonObject(with: Data(r.s("body").utf8))) as? [String: Any],
+                  o["type"] as? String == "msg.create", (o["msg"] as? [String: Any])?["id"] as? String == id else { continue }
+            try? db.run("DELETE FROM outbox WHERE n=?", r.int("n"))
+            dropped = true
+        }
+        guard dropped else { return false }
+        for f in files { try? db.run("DELETE FROM outbox WHERE kind='blob' AND body=?", f) }
+        return true
+    }
+
     // MARK: Vom Server übernehmen
 
     /// Wendet eine Änderung aus /api/sync an. Rückgabe: Raum-ID, falls dieser Raum vollständig nachgeladen werden muss.

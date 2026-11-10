@@ -92,6 +92,40 @@ final class FlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Bitte \(word) mitbringen"].waitForExistence(timeout: 5))
     }
 
+    /// Menü beim langen Drücken: Reaktion setzen, Details ansehen, in einen anderen Chat weiterleiten.
+    func testMessageMenuReactDetailsForward() throws {
+        let text = "Rezept \(Int.random(in: 1000...9999))"
+        newRoom(group: false, name: "UI Ziel \(run)")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        newRoom(group: false, name: "UI Quelle \(run)")
+        send(text)
+        let bubble = app.staticTexts[text]
+        XCTAssertTrue(bubble.waitForExistence(timeout: 5))
+
+        bubble.press(forDuration: 1.0)
+        XCTAssertTrue(app.buttons["Weiterleiten …"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Details"].exists)
+        app.buttons["👍"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["reaction.👍"].waitForExistence(timeout: 5), "Reaktion aus der Leiste erscheint an der Bubble")
+
+        bubble.press(forDuration: 1.0)
+        app.buttons["Details"].tap()
+        XCTAssertTrue(app.staticTexts["Zeichen"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Abgleich"].exists)
+        app.buttons["Fertig"].tap()
+
+        bubble.press(forDuration: 1.0)
+        app.buttons["Weiterleiten …"].tap()
+        let target = app.buttons["forward.room.UI Ziel \(run)"]
+        XCTAssertTrue(target.waitForExistence(timeout: 5))
+        target.tap()
+        XCTAssertTrue(app.staticTexts["Weitergeleitet an „UI Ziel \(run)“"].waitForExistence(timeout: 5))
+        // im Ziel-Chat liegt die Kopie
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.staticTexts["UI Ziel \(run)"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts[text].waitForExistence(timeout: 5))
+    }
+
     func testGroupWithPollChecklistAndInfo() throws {
         let group = "UI Gruppe \(run)"
         newRoom(group: true, name: group)

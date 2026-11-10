@@ -40,11 +40,14 @@ enum Snapshot {
     static func runIfRequested() async {
         guard let out = ProcessInfo.processInfo.environment["THREAD_SNAPSHOT"], !out.isEmpty else { return }
         try? await Task.sleep(for: .seconds(Double(ProcessInfo.processInfo.environment["THREAD_SNAPSHOT_DELAY"] ?? "6") ?? 6))
-        guard let w = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }), let v = w.contentView?.superview ?? w.contentView else { return }
-        let rect = v.bounds
-        guard let rep = v.bitmapImageRepForCachingDisplay(in: rect) else { return }
-        v.cacheDisplay(in: rect, to: rep)
-        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: out))
+        // Hauptfenster nach <pfad>.png, weitere sichtbare Fenster (Aufklapp-Menü, Blätter) nach <pfad>-2.png …
+        let windows = NSApp.windows.filter { $0.isVisible && $0.contentView != nil }
+        for (i, w) in windows.enumerated() {
+            guard let v = w.contentView?.superview ?? w.contentView, let rep = v.bitmapImageRepForCachingDisplay(in: v.bounds) else { continue }
+            v.cacheDisplay(in: v.bounds, to: rep)
+            let path = i == 0 ? out : out.replacingOccurrences(of: ".png", with: "-\(i + 1).png")
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+        }
         NSApp.terminate(nil)
     }
 }

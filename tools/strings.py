@@ -119,11 +119,26 @@ EN = {
     "Zwischenstand zeigen": "Show Live Results", "bearbeitet": "edited", "gesichert": "saved", "von anderem Gerät": "from another device",
     "wartet auf Abgleich": "waiting to sync", "Über": "About", "Überspringen": "Skip",
     "„%@“ mit allen Einträgen löschen": "Delete “%@” and All Entries",
+    # Eintrags-Menü: Weiterleiten, Details, Sichern
+    "Abmessungen": "Dimensions", "Aktionen": "Actions", "Art": "Kind", "Bearbeitet": "Edited", "Beendet": "Ended",
+    "Dateiname": "File Name", "Dauer": "Duration",
+    "Der Eintrag wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist.":
+        "The entry is copied into the chat you choose. The original stays where it is.",
+    "Die Datei konnte nicht geladen werden.": "The file could not be loaded.", "Erstellt": "Created",
+    "Fehlgeschlagen": "Failed", "Gerät": "Device", "Gesichert": "Saved", "Größe": "Size",
+    "In Fotos gesichert": "Saved to Photos", "In Fotos sichern": "Save to Photos", "Ja": "Yes", "Nein": "No",
+    "Kein Chat gefunden": "No chat found",
+    "Kein Zugriff auf Fotos – erlaube ihn in den Einstellungen.": "No access to Photos – allow it in Settings.",
+    "Kennung": "ID", "Koordinaten": "Coordinates", "Reaktionen": "Reactions", "Sichern unter …": "Save As…",
+    "Text": "Text", "Typ": "Type", "Verfasser": "Author", "Wartet auf Abgleich": "Waiting to sync",
+    "Weitergeleitet an „%@“": "Forwarded to “%@”", "Weiterleiten an": "Forward To", "Weiterleiten …": "Forward…",
+    "Wörter": "Words", "Zeichen": "Characters", "Reagieren": "React",
 }
 SKIP = {"", "%lld", "%lld/%lld", "0", "99+", "@%@"}
 INFOPLIST = {
     "NSCameraUsageDescription": "So you can take photos and videos directly into a chat.",
     "NSPhotoLibraryUsageDescription": "So you can add photos and videos to a chat.",
+    "NSPhotoLibraryAddUsageDescription": "So you can save photos and videos from a chat to your photo library.",
     "NSMicrophoneUsageDescription": "So you can record voice notes.",
     "NSLocationWhenInUseUsageDescription": "So you can save your current location in a chat.",
     "NSLocationUsageDescription": "So you can save your current location in a chat.",

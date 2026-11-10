@@ -10,6 +10,10 @@ struct BubbleActions {
     var onOpenMedia: (Message) -> Void = { _ in }
     /// Löschen bestätigen (ein Dialog im Chat statt einem je Bubble)
     var onDelete: (Message) -> Void = { _ in }
+    var onForward: (Message) -> Void = { _ in }
+    var onDetails: (Message) -> Void = { _ in }
+    /// Bild/Video/Datei sichern (iPhone: Fotos, Mac: „Sichern unter“)
+    var onSave: (Message) -> Void = { _ in }
 }
 
 /// Eine Zeile des Verlaufs: (iPhone) Datums-Pille bei Tageswechsel, ggf. „Neu von anderem Gerät“, dann die Bubble.
@@ -26,6 +30,9 @@ struct TimelineRowView: View {
             if let n = row.unreadCount { NewFromOtherDeviceLine(count: n) }
             MessageBubble(row: row, highlighted: highlighted, actions: actions)
         }
+        #if os(iOS)
+        .coordinateSpace(.named("row"))
+        #endif
         .tint(Theme.accent)
         .id(row.id)
     }
@@ -37,6 +44,10 @@ struct MessageBubble: View {
     let row: TimelineRow
     var highlighted = false
     var actions = BubbleActions()
+    #if os(macOS)
+    @State private var hover = false
+    @State private var showMenu = false
+    #endif
 
     var message: Message { row.message }
     var mine: Bool { row.mine }
@@ -56,7 +67,7 @@ struct MessageBubble: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 6) {
+        HStack(alignment: .top, spacing: 6) {
             if mine { Spacer(minLength: 40) }
             VStack(alignment: mine ? .trailing : .leading, spacing: 3) {
                 bubble
@@ -67,6 +78,8 @@ struct MessageBubble: View {
         #if os(macOS)
         .padding(.horizontal, 14)
         .padding(.top, row.compactTop ? 4 : 8)
+        .contentShape(Rectangle())
+        .onHover { hover = $0 }
         #else
         .padding(.horizontal, 8)
         .padding(.top, row.compactTop ? 2 : 6)
@@ -96,11 +109,30 @@ struct MessageBubble: View {
                     .padding(5).rotationEffect(.degrees(45))
             }
         }
-        .frame(maxWidth: maxWidth, alignment: mine ? .trailing : .leading)
-        #if os(iOS)
-        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Theme.bubbleRadius, style: .continuous))
+        #if os(macOS)
+        // Pfeil direkt neben der sichtbaren Bubble (innen), unabhängig von ihrer Breite
+        .overlay(alignment: mine ? .topLeading : .topTrailing) { menuButton.offset(x: mine ? -28 : 28, y: 3) }
+        #if DEBUG
+        // Nur Debug (THREAD_MENU=<Text>): Menü dieses Eintrags fest neben der Bubble zeigen – für Bildschirmfotos ohne Maus
+        .overlay(alignment: .topLeading) {
+            if model.debugMenu == message.body {
+                MessageMenuPopover(groups: actionGroups, mine: Set(row.reactions.filter(\.mine).map(\.emoji)), react: { _ in }, close: {})
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.hairline))
+                    .fixedSize()
+                    .offset(x: -290, y: -120)
+            }
+        }
         #endif
+        #endif
+        .frame(maxWidth: maxWidth, alignment: mine ? .trailing : .leading)
+        // iPhone: das Menü (lange drücken) stellt die Tabelle des Verlaufs, siehe `ChatHistory`; dafür merkt sich die
+        // Bubble ihren Platz in der Zeile (ändert sich nur beim Umbruch, nicht beim Scrollen)
+        #if os(macOS)
         .contextMenu { menu }
+        #else
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("row")) } action: { BubbleFrames.frames[row.id] = $0 }
+        #endif
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("bubble.\(message.kind.rawValue)")
     }
@@ -212,54 +244,44 @@ struct MessageBubble: View {
         .font(.callout)
     }
 
-    static let quickReactions = ["👍", "👎", "❤️", "😂", "😢", "🙏"]
-    static let moreReactions = ["🎉", "🔥", "✅", "❓", "👀", "💡", "⭐️", "😮"]
+    var actionGroups: [[MessageAction]] { MessageMenuBuilder.groups(row: row, model: model, actions: actions) }
 
+    #if os(macOS)
+    /// Rechtsklick: gleiche Aktionen wie im Aufklapp-Menü, Reaktionen als Untermenü
     @ViewBuilder
     private var menu: some View {
-        ControlGroup {
-            ForEach(Self.quickReactions, id: \.self) { e in
-                Button(e) { model.toggleReaction(message, emoji: e) }
-            }
-        }
-        .controlGroupStyle(.palette)
         Menu {
-            ForEach(Self.moreReactions, id: \.self) { e in Button(e) { model.toggleReaction(message, emoji: e) } }
-        } label: { Label("Weitere Reaktionen", systemImage: "face.smiling") }
-        Divider()
-        Button { model.toggleStar(message) } label: {
-            row.starred ? Label("Nicht mehr merken", systemImage: "star.slash") : Label("Merken", systemImage: "star")
+            ForEach(Reactions.quick + Reactions.more, id: \.self) { e in Button(e) { model.toggleReaction(message, emoji: e) } }
+        } label: { Label("Reagieren", systemImage: "face.smiling") }
+        ForEach(Array(actionGroups.enumerated()), id: \.offset) { _, group in
+            Divider()
+            ForEach(group) { MessageActionButton(action: $0) }
         }
-        if message.failed != nil {
-            Button { model.retry(message) } label: { Label("Erneut versuchen", systemImage: "arrow.clockwise") }
-        }
-        Button { actions.onReply(message) } label: { Label("Darauf antworten", systemImage: "arrowshape.turn.up.left") }
-        if message.kind == .text && mine {
-            Button { actions.onEdit(message) } label: { Label("Bearbeiten", systemImage: "pencil") }
-        }
-        Button { model.togglePin(message) } label: {
-            message.pinned ? Label("Lösen", systemImage: "pin.slash") : Label("Oben anheften", systemImage: "pin")
-        }
-        Divider()
-        if message.kind == .text || message.kind == .checklist || message.kind == .poll {
-            Button { Clipboard.copy(model.store?.searchText(message) ?? message.body) } label: { Label("Kopieren", systemImage: "doc.on.doc") }
-        }
-        if message.kind == .image, let u = row.attachmentURL {
-            Button { Clipboard.copyImage(u) } label: { Label("Kopieren", systemImage: "doc.on.doc") }
-        }
-        if let item = shareItem {
-            ShareLink(item: item) { Label("Teilen …", systemImage: "square.and.arrow.up") }
-        } else if message.kind == .text {
-            ShareLink(item: message.body) { Label("Teilen …", systemImage: "square.and.arrow.up") }
-        }
-        if message.kind == .poll && message.payload.closed != true && mine {
-            Button { model.closePoll(message) } label: { Label("Abstimmung beenden", systemImage: "checkmark.seal") }
-        }
-        Divider()
-        Button(role: .destructive) { actions.onDelete(message) } label: { Label("Löschen", systemImage: "trash") }
     }
+    #endif
 
-    private var shareItem: URL? { row.attachmentURL }
+    #if os(macOS)
+    /// Mac: Pfeil neben der Bubble (erscheint beim Überfahren) – öffnet Reaktionen und Aktionen
+    private var menuButton: some View {
+        Button { showMenu = true } label: {
+            Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.text2)
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Theme.otherBubble))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .opacity(hover || showMenu || model.debugMenu == message.body ? 1 : 0)
+        .help(Text("Aktionen"))
+        .accessibilityLabel(Text("Aktionen"))
+        .accessibilityIdentifier("bubble.menu")
+        .popover(isPresented: $showMenu, arrowEdge: .bottom) {
+            MessageMenuPopover(groups: actionGroups, mine: Set(row.reactions.filter(\.mine).map(\.emoji)),
+                               react: { model.toggleReaction(message, emoji: $0); showMenu = false },
+                               close: { showMenu = false })
+        }
+    }
+    #endif
+
 }
 
 /// Zwischenablage für iPhone und Mac.

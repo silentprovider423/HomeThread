@@ -81,6 +81,22 @@
         }
       }
     },
+    "NSPhotoLibraryAddUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damit du Fotos und Videos aus einem Chat in deiner Fotomediathek sichern kannst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So you can save photos and videos from a chat to your photo library."
+          }
+        }
+      }
+    },
     "NSPhotoLibraryUsageDescription": {
       "localizations": {
         "de": {

@@ -50,6 +50,8 @@ final class AppModel {
     var requestNew: NewRoomFlow.Mode?
     /// Debug/Screenshots: Raum mit diesem Titel öffnen
     var debugOpen: String?
+    /// Nur Debug (Mac): Aufklapp-Menü des Eintrags mit diesem Text öffnen
+    var debugMenu: String?
     /// Debug/Screenshots: Info-Seite des geöffneten Raums zeigen
     var debugShowInfo = false
     var debugTab: Int?
@@ -256,7 +258,8 @@ final class AppModel {
                 let res = byID[row.s("op_id")] ?? [:]
                 let ok = res["ok"] as? Bool ?? false
                 let code = res["error"] as? String ?? ""
-                if !ok && code == "blob_missing" {
+                // Datei fehlt auf dem Server: später noch einmal – außer sie liegt auch hier nicht mehr (dann nie)
+                if !ok && code == "blob_missing", Self.hasLocalFiles(op, store) {
                     retryLater = true
                     try? store.db.run("UPDATE outbox SET attempts=attempts+1, last_error=? WHERE n=?", code, row.int("n"))
                     break
@@ -267,6 +270,11 @@ final class AppModel {
             pending = store.pendingCount
             if retryLater { return }
         }
+    }
+
+    private static func hasLocalFiles(_ op: [String: Any], _ store: LocalStore) -> Bool {
+        guard let m = op["msg"] as? [String: Any] else { return true }
+        return [m["attachment"], m["thumb"]].compactMap { $0 as? String }.allSatisfy { store.fileURL($0) != nil }
     }
 
     private func markFailed(_ op: [String: Any], code: String, _ store: LocalStore) {
@@ -653,6 +661,35 @@ final class AppModel {
         addMessage(room: room, kind: .checklist, body: title, items: items)
     }
 
+    /// „Weiterleiten“: Eintrag als Kopie in einen anderen Raum legen. Anhänge werden mitkopiert, damit das Löschen
+    /// des Originals die Kopie nicht trifft. Abstimmungen starten neu, Checklisten ohne Haken.
+    @discardableResult
+    func forward(_ m: Message, to room: String) async -> Bool {
+        guard let store else { return false }
+        switch m.kind {
+        case .text:
+            addMessage(room: room, kind: .text, body: m.body)
+        case .location:
+            addMessage(room: room, kind: .location, payload: m.payload)
+        case .poll:
+            var pl = m.payload
+            pl.closed = false
+            addMessage(room: room, kind: .poll, payload: pl)
+        case .checklist:
+            addMessage(room: room, kind: .checklist, body: m.body, items: store.items(message: m.id).map(\.text))
+        case .image, .video, .file, .voice:
+            let name = m.payload.filename ?? "datei", mime = m.payload.mime ?? "application/octet-stream"
+            guard let id = m.attachment, let src = await ensureFile(id: id, name: name, mime: mime),
+                  let att = saveFile(src, name: name, mime: mime, move: false) else { return false }
+            var thumb: String?
+            if let t = m.thumb, let tsrc = await ensureFile(id: t, name: "thumb.jpg", mime: "image/jpeg") {
+                thumb = saveFile(tsrc, name: "thumb.jpg", mime: "image/jpeg", move: false)
+            }
+            addMessage(room: room, kind: m.kind, body: m.body, payload: m.payload, attachment: att, thumb: thumb)
+        }
+        return true
+    }
+
     func editText(_ m: Message, body: String) {
         let t = body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
@@ -663,11 +700,15 @@ final class AppModel {
     }
 
     func deleteMessage(_ m: Message) {
+        // Noch nicht abgeglichen: Anlegen und Dateien aus der Warteschlange nehmen – der Server erfährt nie davon.
+        // (Sonst wartet das Anlegen ewig auf eine Datei, die es nicht mehr gibt, und alles dahinter bleibt liegen.)
+        let unsent = store?.dropQueuedCreate(message: m.id, files: [m.attachment, m.thumb].compactMap { $0 }) ?? false
         store?.removeFile(m.attachment)
         store?.removeFile(m.thumb)
         try? store?.db.run("UPDATE messages SET deleted=1 WHERE id=?", m.id)
         store?.reindex(m.id)
-        if m.failed != nil {
+        if m.failed != nil || unsent {
+            pending = store?.pendingCount ?? 0
             changed()
             return
         }

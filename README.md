@@ -41,9 +41,11 @@ Everything is stored on the device first (offline-first) and synced with a small
 - **Location** (current location or a pin on the map, with a name; static map preview, opens in Maps)
 - **Polls** (single or multiple choice, live results or hidden until closed, end poll, winner marked)
 - **Checklists** (tick off, add items inline, hide done items)
-- **Reply/quote** (context menu or swipe right on iPhone), tap the quote to jump to the original
+- **Entry menu**: long-press an entry on iPhone (reaction bar on top, actions below); on the Mac hover an entry and click the arrow next to it, or right-click
+- **Reply/quote** (menu or swipe right on iPhone), tap the quote to jump to the original
 - **Reactions** (👍 👎 ❤️ 😂 😢 🙏 + more), **star** entries, **pin** entries to the top bar of a room
-- Copy, share, delete on all devices, retry failed uploads
+- **Forward** an entry as a copy into another chat (attachments are copied too), **details** (kind, author, device, created/edited, sync state, file size, dimensions …; on iPhone also swipe left)
+- Copy, share, **save** photos and videos to Photos (iPhone) or *Save As…* (Mac), delete on all devices, retry failed uploads
 
 **Search**
 - Search all chats (full text, case and accent insensitive, prefix search) with scopes: text, media, places, polls, checklists, starred

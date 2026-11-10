@@ -30,9 +30,12 @@ struct ChatView: View {
     @State private var showInfoPush = false
     @State private var scrollTarget: String?
     @State private var confirmDeleteRoom = false
+    /// kurze Rückmeldung oben im Chat („Weitergeleitet an …“)
+    @State private var notice: String?
+    @State private var noticeTask: Task<Void, Never>?
 
     enum Sheet: Identifiable {
-        case poll, checklist, location, camera, media(Message)
+        case poll, checklist, location, camera, media(Message), forward(Message), details(Message)
         var id: String {
             switch self {
             case .poll: return "poll"
@@ -40,6 +43,8 @@ struct ChatView: View {
             case .location: return "location"
             case .camera: return "camera"
             case .media(let m): return "media.\(m.id)"
+            case .forward(let m): return "forward.\(m.id)"
+            case .details(let m): return "details.\(m.id)"
             }
         }
     }
@@ -67,6 +72,16 @@ struct ChatView: View {
         return ChatHistory(model: model, timeline: timeline, version: timeline.version, highlight: highlight,
                            scrollRequest: scrollRequest, actions: actions)
             .background(Theme.chatBackground)
+            .overlay(alignment: .top) {
+                if let notice {
+                    Text(notice).font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(.regularMaterial, in: Capsule())
+                        .padding(.top, 10)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .accessibilityIdentifier("chat.notice")
+                }
+            }
             .safeAreaInset(edge: .top, spacing: 0) { topBars(room, hits: hits, pinned: pinned) }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 InputBar(roomId: roomId, text: $text, replyTo: $replyTo, editing: $editing) { a in
@@ -129,7 +144,37 @@ struct ChatView: View {
                       onJump: { jump(to: $0) },
                       onEdit: { editing = $0; replyTo = nil; text = $0.body },
                       onOpenMedia: { sheet = .media($0) },
-                      onDelete: { confirmDeleteMessage = $0 })
+                      onDelete: { confirmDeleteMessage = $0 },
+                      onForward: { sheet = .forward($0) },
+                      onDetails: { sheet = .details($0) },
+                      onSave: { save($0) })
+    }
+
+    private func show(_ text: String) {
+        noticeTask?.cancel()
+        withAnimation(.spring(duration: 0.3)) { notice = text }
+        noticeTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            if !Task.isCancelled { withAnimation { notice = nil } }
+        }
+    }
+
+    /// Anhang sichern: iPhone in die Fotomediathek (Bild/Video), Mac über „Sichern unter“.
+    private func save(_ m: Message) {
+        guard let id = m.attachment else { return }
+        let name = m.payload.filename ?? "datei"
+        Task {
+            guard let url = await model.ensureFile(id: id, name: name, mime: m.payload.mime ?? "application/octet-stream") else {
+                show(String(localized: "Die Datei konnte nicht geladen werden."))
+                return
+            }
+            #if os(macOS)
+            if MediaSaver.saveAs(url, name: name) { show(String(localized: "Gesichert")) }
+            #else
+            let ok = await MediaSaver.saveToPhotos(url, video: m.kind == .video)
+            show(ok ? String(localized: "In Fotos gesichert") : String(localized: "Kein Zugriff auf Fotos – erlaube ihn in den Einstellungen."))
+            #endif
+        }
     }
 
     /// Oben über dem Verlauf: (Mac) Kopfzeile, Suche im Chat, angeheftete Einträge.
@@ -331,6 +376,10 @@ struct ChatView: View {
             #endif
         case .media(let m):
             MediaViewer(message: m)
+        case .forward(let m):
+            ForwardSheet(message: m) { room in show(String(localized: "Weitergeleitet an „\(room.title)“")) }
+        case .details(let m):
+            MessageDetailsView(message: m)
         }
     }
 

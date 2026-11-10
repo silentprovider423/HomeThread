@@ -40,6 +40,8 @@
 	<string>Damit du deinen aktuellen Ort in einem Chat festhalten kannst.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Damit du Sprachnotizen aufnehmen kannst.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Damit du Fotos und Videos aus einem Chat in deiner Fotomediathek sichern kannst.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Damit du Fotos und Videos in einem Chat ablegen kannst.</string>
 	<key>UILaunchScreen</key>

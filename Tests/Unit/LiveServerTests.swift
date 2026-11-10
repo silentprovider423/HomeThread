@@ -169,6 +169,58 @@ final class LiveServerTests: XCTestCase {
         await b.signOut(revoke: false)
     }
 
+    /// „Weiterleiten“: Kopie in einen anderen Raum, Anhänge als eigene Dateien (Löschen des Originals trifft die Kopie nicht).
+    @MainActor func testForwardCopiesEntriesAndFiles() async throws {
+        guard let s = env["THREAD_SERVER"], let t1 = env["THREAD_TOKEN"], let t2 = env["THREAD_TOKEN2"] else { throw XCTSkip("kein Server") }
+        let a = AppModel(), b = AppModel()
+        try await a.loginWithToken(server: s, token: t1, reset: true)
+        try await b.loginWithToken(server: s, token: t2, reset: true)
+        await a.syncNow()
+        let n = Int.random(in: 1000...9999)
+        let from = try XCTUnwrap(a.createRoom(kind: .chat, title: "Weiterleiten-Quelle \(n)"))
+        let to = try XCTUnwrap(a.createRoom(kind: .chat, title: "Weiterleiten-Ziel \(n)"))
+        a.sendText(room: from, "Bitte merken", replyTo: nil)
+        a.sendImage(room: from, data: try Self.makeJPEG(), caption: "Bild")
+        a.sendChecklist(room: from, title: "Liste", items: ["Eins", "Zwei"])
+        a.sendPoll(room: from, question: "Wohin?", options: ["Nord", "Süd"], multi: false, showInterim: true)
+        let originals = a.store?.messages(room: from, limit: 10) ?? []
+        XCTAssertEqual(originals.map(\.kind), [.text, .image, .checklist, .poll])
+        a.toggleItem(try XCTUnwrap(a.store?.items(message: originals[2].id).first))
+        a.closePoll(originals[3])
+
+        for m in a.store?.messages(room: from, limit: 10) ?? [] {
+            let ok = await a.forward(m, to: to)
+            XCTAssertTrue(ok, "\(m.kind)")
+        }
+        let copies = a.store?.messages(room: to, limit: 10) ?? []
+        XCTAssertEqual(copies.map(\.kind), [.text, .image, .checklist, .poll])
+        XCTAssertEqual(copies[0].body, "Bitte merken")
+        XCTAssertEqual(copies[1].body, "Bild")
+        XCTAssertNotEqual(copies[1].attachment, originals[1].attachment, "eigene Datei")
+        XCTAssertNotEqual(copies[1].thumb, originals[1].thumb)
+        XCTAssertEqual(a.store?.items(message: copies[2].id).map(\.text), ["Eins", "Zwei"])
+        XCTAssertEqual(a.store?.items(message: copies[2].id).map(\.done), [false, false], "Kopie startet ohne Haken")
+        XCTAssertNotEqual(copies[3].payload.closed, true, "Abstimmung startet neu")
+        XCTAssertEqual(a.store?.messages(room: from, limit: 10).count, 4, "Originale bleiben")
+
+        // Original-Bild löschen: die Kopie behält ihre Datei
+        a.deleteMessage(originals[1])
+        XCTAssertNotNil(a.store?.fileURL(try XCTUnwrap(copies[1].attachment)))
+        await a.syncNow()
+        XCTAssertEqual(a.pending, 0, "ein vor dem Abgleich gelöschter Eintrag mit Datei darf die Warteschlange nicht blockieren")
+        await b.syncNow()
+        await b.syncNow()
+        let seen = b.store?.messages(room: to, limit: 10) ?? []
+        XCTAssertEqual(seen.map(\.kind), [.text, .image, .checklist, .poll])
+        XCTAssertNotNil(b.store?.fileURL(try XCTUnwrap(seen[1].thumb)), "Vorschau der Kopie kommt auf dem zweiten Gerät an")
+
+        a.deleteRoom(from)
+        a.deleteRoom(to)
+        await a.syncNow()
+        await a.signOut(revoke: false)
+        await b.signOut(revoke: false)
+    }
+
     @MainActor static func makeJPEG() throws -> Data {
         let w = 400, h = 300
         let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),

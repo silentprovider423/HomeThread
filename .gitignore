@@ -13,3 +13,4 @@ xcuserdata/
 server/.env
 server/data/
 server/backup/
+.sign-identity
