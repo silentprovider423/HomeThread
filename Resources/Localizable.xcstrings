@@ -7,6 +7,38 @@
     "%lld": {
       "shouldTranslate": false
     },
+    "%lld Einträge auf allen Geräten löschen?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Einträge auf allen Geräten löschen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %lld entries on all devices?"
+          }
+        }
+      }
+    },
+    "%lld Einträge kopiert": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Einträge kopiert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld entries copied"
+          }
+        }
+      }
+    },
     "%lld Mitglieder": {
       "localizations": {
         "de": {
@@ -19,6 +51,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld members"
+          }
+        }
+      }
+    },
+    "%lld ausgewählt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ausgewählt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld selected"
           }
         }
       }
@@ -307,6 +355,22 @@
         }
       }
     },
+    "Aktivität & Reisen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivität & Reisen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity & Travel"
+          }
+        }
+      }
+    },
     "Aktuelles Passwort": {
       "localizations": {
         "de": {
@@ -351,6 +415,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete all entries?"
+          }
+        }
+      }
+    },
+    "Alle Emojis …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Emojis …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Emoji…"
           }
         }
       }
@@ -755,6 +835,22 @@
         }
       }
     },
+    "Aus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
     "Aus Fotos wählen": {
       "localizations": {
         "de": {
@@ -767,6 +863,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose from Photos"
+          }
+        }
+      }
+    },
+    "Auswählen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswählen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select…"
           }
         }
       }
@@ -1363,18 +1475,18 @@
         }
       }
     },
-    "Der Eintrag wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist.": {
+    "Der Link zeigt auf einen Eintrag, den es auf diesem Gerät nicht (mehr) gibt.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Eintrag wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist."
+            "value": "Der Link zeigt auf einen Eintrag, den es auf diesem Gerät nicht (mehr) gibt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The entry is copied into the chat you choose. The original stays where it is."
+            "value": "The link points to an entry that does not exist on this device (any more)."
           }
         }
       }
@@ -1423,6 +1535,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "The app only talks to your server. Nothing is ever sent to other people."
+          }
+        }
+      }
+    },
+    "Die Auswahl wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Auswahl wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selection is copied into the chat you choose. The original stays where it is."
           }
         }
       }
@@ -1535,6 +1663,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "This device was signed out. Please sign in again."
+          }
+        }
+      }
+    },
+    "Dinge": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinge"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objects"
+          }
+        }
+      }
+    },
+    "Doppeltippen reagiert mit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doppeltippen reagiert mit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-Tap Reacts With"
           }
         }
       }
@@ -1683,6 +1843,22 @@
         }
       }
     },
+    "Emoji suchen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emoji suchen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search emoji"
+          }
+        }
+      }
+    },
     "Entfernen": {
       "localizations": {
         "de": {
@@ -1827,6 +2003,22 @@
         }
       }
     },
+    "Essen & Trinken": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essen & Trinken"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Food & Drink"
+          }
+        }
+      }
+    },
     "Fehler": {
       "localizations": {
         "de": {
@@ -1935,6 +2127,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Question, e.g. What should we cook on Sunday?"
+          }
+        }
+      }
+    },
+    "Frühere Fassungen (%lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühere Fassungen (%lld)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earlier Versions (%lld)"
           }
         }
       }
@@ -2227,6 +2435,22 @@
         }
       }
     },
+    "Herzen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hearts"
+          }
+        }
+      }
+    },
     "Heute": {
       "localizations": {
         "de": {
@@ -2271,6 +2495,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "HomeThread is an independent open-source project (GPLv3 license). It never sends anything to other people – chats and groups are note rooms on your own server."
+          }
+        }
+      }
+    },
+    "Hände & Menschen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hände & Menschen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hands & People"
           }
         }
       }
@@ -2451,6 +2691,22 @@
         }
       }
     },
+    "Jedes Bearbeiten hebt die vorherige Fassung auf, höchstens die letzten 20.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Bearbeiten hebt die vorherige Fassung auf, höchstens die letzten 20."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every edit keeps the previous version, up to the last 20."
+          }
+        }
+      }
+    },
     "Jedes Gerät hat eine eigene Anmeldung. Ein verlorenes Gerät kannst du hier abmelden.": {
       "localizations": {
         "de": {
@@ -2527,6 +2783,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "No chat found"
+          }
+        }
+      }
+    },
+    "Kein Emoji gefunden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Emoji gefunden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No emoji found"
           }
         }
       }
@@ -2719,6 +2991,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Create a chat with ⌘N or a group with ⇧⌘N."
+          }
+        }
+      }
+    },
+    "Link zum Eintrag kopieren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link zum Eintrag kopieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Link to Entry"
           }
         }
       }
@@ -3507,6 +3795,22 @@
         }
       }
     },
+    "Reaktion wählen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reaktion wählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Reaction"
+          }
+        }
+      }
+    },
     "Reaktionen": {
       "localizations": {
         "de": {
@@ -3631,6 +3935,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save As…"
+          }
+        }
+      }
+    },
+    "Smileys": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smileys"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smileys"
           }
         }
       }
@@ -3763,6 +4083,22 @@
         }
       }
     },
+    "Symbole": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbols"
+          }
+        }
+      }
+    },
     "Teilen …": {
       "localizations": {
         "de": {
@@ -3807,6 +4143,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Text"
+          }
+        }
+      }
+    },
+    "Tiere & Natur": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiere & Natur"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animals & Nature"
           }
         }
       }
@@ -3935,6 +4287,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Video"
+          }
+        }
+      }
+    },
+    "Vorlesen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlesen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read Aloud"
+          }
+        }
+      }
+    },
+    "Vorlesen beenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlesen beenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Reading"
           }
         }
       }
@@ -4191,6 +4575,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last active: %@"
+          }
+        }
+      }
+    },
+    "Zuletzt benutzt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt benutzt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recently Used"
           }
         }
       }

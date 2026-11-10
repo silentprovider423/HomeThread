@@ -33,9 +33,12 @@ struct ChatView: View {
     /// kurze Rückmeldung oben im Chat („Weitergeleitet an …“)
     @State private var notice: String?
     @State private var noticeTask: Task<Void, Never>?
+    /// Mehrfachauswahl: nil = aus, sonst die gewählten Einträge
+    @State private var selection: Set<String>?
+    @State private var confirmDeleteSelection = false
 
     enum Sheet: Identifiable {
-        case poll, checklist, location, camera, media(Message), forward(Message), details(Message)
+        case poll, checklist, location, camera, media(Message), forward([Message]), details(Message), emoji(Message)
         var id: String {
             switch self {
             case .poll: return "poll"
@@ -43,7 +46,8 @@ struct ChatView: View {
             case .location: return "location"
             case .camera: return "camera"
             case .media(let m): return "media.\(m.id)"
-            case .forward(let m): return "forward.\(m.id)"
+            case .forward(let m): return "forward.\(m.first?.id ?? "")"
+            case .emoji(let m): return "emoji.\(m.id)"
             case .details(let m): return "details.\(m.id)"
             }
         }
@@ -70,7 +74,7 @@ struct ChatView: View {
         let hits = searching && !query.isEmpty ? store.search(query, room: roomId) : []
 
         return ChatHistory(model: model, timeline: timeline, version: timeline.version, highlight: highlight,
-                           scrollRequest: scrollRequest, actions: actions)
+                           selection: selection, scrollRequest: scrollRequest, actions: actions)
             .background(Theme.chatBackground)
             .overlay(alignment: .top) {
                 if let notice {
@@ -84,6 +88,12 @@ struct ChatView: View {
             }
             .safeAreaInset(edge: .top, spacing: 0) { topBars(room, hits: hits, pinned: pinned) }
             .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let selection {
+                    SelectionBar(count: selection.count, onCopy: copySelection,
+                                 onForward: { let list = selectedMessages; if !list.isEmpty { sheet = .forward(list) } },
+                                 onDelete: { if !selection.isEmpty { confirmDeleteSelection = true } },
+                                 onCancel: { self.selection = nil })
+                } else {
                 InputBar(roomId: roomId, text: $text, replyTo: $replyTo, editing: $editing) { a in
                     switch a {
                     case .camera: sheet = .camera
@@ -93,6 +103,7 @@ struct ChatView: View {
                     case .checklist: sheet = .checklist
                     case .file: showFiles = true
                     }
+                }
                 }
             }
             // jede Änderung der Datenbank: Fenster im Hintergrund neu lesen, nur geänderte Zeilen neu zeichnen
@@ -110,6 +121,12 @@ struct ChatView: View {
                             isPresented: Binding(get: { confirmDeleteMessage != nil }, set: { if !$0 { confirmDeleteMessage = nil } }),
                             presenting: confirmDeleteMessage) { m in
             Button("Löschen", role: .destructive) { model.deleteMessage(m) }
+        }
+        .confirmationDialog("\(selection?.count ?? 0) Einträge auf allen Geräten löschen?", isPresented: $confirmDeleteSelection, titleVisibility: .visible) {
+            Button("Löschen", role: .destructive) {
+                model.deleteMessages(selectedMessages)
+                selection = nil
+            }
         }
         .confirmationDialog("Wirklich löschen?", isPresented: $confirmDeleteRoom) {
             Button("Löschen", role: .destructive) { model.deleteRoom(roomId) }
@@ -145,9 +162,30 @@ struct ChatView: View {
                       onEdit: { editing = $0; replyTo = nil; text = $0.body },
                       onOpenMedia: { sheet = .media($0) },
                       onDelete: { confirmDeleteMessage = $0 },
-                      onForward: { sheet = .forward($0) },
+                      onForward: { sheet = .forward([$0]) },
                       onDetails: { sheet = .details($0) },
-                      onSave: { save($0) })
+                      onSave: { save($0) },
+                      onSelect: { selection = [$0.id]; replyTo = nil; editing = nil },
+                      onToggleSelect: { m in
+                          guard var s = selection else { return }
+                          if s.contains(m.id) { s.remove(m.id) } else { s.insert(m.id) }
+                          selection = s
+                      },
+                      onPickEmoji: { sheet = .emoji($0) })
+    }
+
+    /// gewählte Einträge in der Reihenfolge des Verlaufs
+    private var selectedMessages: [Message] {
+        guard let selection, let store = model.store else { return [] }
+        return selection.compactMap { store.message($0) }.filter { !$0.deleted }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private func copySelection() {
+        let list = selectedMessages
+        guard !list.isEmpty else { return }
+        Clipboard.copy(list.map { model.store?.searchText($0) ?? $0.preview }.joined(separator: "\n\n"))
+        selection = nil
+        show(String(localized: "\(list.count) Einträge kopiert"))
     }
 
     private func show(_ text: String) {
@@ -376,8 +414,13 @@ struct ChatView: View {
             #endif
         case .media(let m):
             MediaViewer(message: m)
-        case .forward(let m):
-            ForwardSheet(message: m) { room in show(String(localized: "Weitergeleitet an „\(room.title)“")) }
+        case .forward(let list):
+            ForwardSheet(messages: list) { room in
+                selection = nil
+                show(String(localized: "Weitergeleitet an „\(room.title)“"))
+            }
+        case .emoji(let m):
+            EmojiPickerSheet { model.toggleReaction(m, emoji: $0) }
         case .details(let m):
             MessageDetailsView(message: m)
         }

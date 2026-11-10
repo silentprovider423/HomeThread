@@ -48,6 +48,14 @@ final class AppModel {
 
     /// Mac-Menü „Neuer Chat/Neue Gruppe“ → Seitenleiste zeigt den Dialog
     var requestNew: NewRoomFlow.Mode?
+    /// Chat öffnen und zu einem Eintrag springen (Link auf einen Eintrag)
+    var openRequest: ChatRoute?
+    /// zählt hoch, wenn ein Link auf einen Eintrag zeigt, den es hier nicht (mehr) gibt
+    var linkNotFound = 0
+    /// iPhone: Reaktion beim Doppeltippen auf einen Eintrag ("" = aus)
+    var quickReaction: String = UserDefaults.standard.string(forKey: "quickReaction") ?? "👍" {
+        didSet { UserDefaults.standard.set(quickReaction, forKey: "quickReaction") }
+    }
     /// Debug/Screenshots: Raum mit diesem Titel öffnen
     var debugOpen: String?
     /// Nur Debug (Mac): Aufklapp-Menü des Eintrags mit diesem Text öffnen
@@ -692,11 +700,35 @@ final class AppModel {
 
     func editText(_ m: Message, body: String) {
         let t = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else { return }
-        try? store?.db.run("UPDATE messages SET body=?, edited_at=? WHERE id=?", t, Date(), m.id)
+        guard !t.isEmpty, t != m.body else { return }
+        // bisherige Fassung in den Verlauf: höchstens 20, und klein genug für den Server (Zusatzdaten ≤ 32 KB)
+        var pl = m.payload
+        var history = pl.history ?? []
+        history.append(Payload.Edit(body: m.body, at: (m.editedAt ?? m.createdAt).timeIntervalSince1970))
+        if history.count > 20 { history.removeFirst(history.count - 20) }
+        pl.history = history
+        while pl.json.utf8.count > 24_000, pl.history?.isEmpty == false { pl.history?.removeFirst() }
+        try? store?.db.run("UPDATE messages SET body=?, payload=?, edited_at=? WHERE id=?", t, pl.json, Date(), m.id)
         store?.reindex(m.id)
-        op("msg.edit", ["id": m.id, "body": t])
+        op("msg.edit", ["id": m.id, "body": t, "payload": pl.dict])
         changed()
+    }
+
+    /// Mehrere Einträge auf einmal löschen (Mehrfachauswahl).
+    func deleteMessages(_ list: [Message]) {
+        for m in list { deleteMessage(m) }
+    }
+
+    /// Link auf einen Eintrag öffnen (aus dem Verlauf angetippt oder von außen). false = kein solcher Link bzw. Eintrag unbekannt.
+    @discardableResult
+    func open(link url: URL) -> Bool {
+        guard let route = EntryLink.parse(url) else { return false }
+        guard let id = route.jump, let m = store?.message(id), !m.deleted, m.roomId == route.room else {
+            linkNotFound += 1
+            return true
+        }
+        openRequest = route
+        return true
     }
 
     func deleteMessage(_ m: Message) {

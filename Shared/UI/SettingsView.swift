@@ -38,6 +38,12 @@ struct SettingsView: View {
                 } label: { Label("Darstellung", systemImage: "circle.lefthalf.filled") }
                 #if os(macOS)
                 Toggle("Mit ↩ ablegen (sonst ⌘↩)", isOn: Bindable(model).returnSends)
+                #else
+                Picker(selection: Bindable(model).quickReaction) {
+                    Text("Aus").tag("")
+                    ForEach(["👍", "❤️", "😂", "✅", "⭐️", "🙏"], id: \.self) { Text($0).tag($0) }
+                } label: { Label("Doppeltippen reagiert mit", systemImage: "hand.tap") }
+                .accessibilityIdentifier("settings.quickReaction")
                 #endif
             }
             Section {

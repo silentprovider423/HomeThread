@@ -28,6 +28,10 @@ nonisolated struct RichText: Hashable, Sendable {
                 from = ar.upperBound
             }
         }
+        // Links auf andere Einträge (homethread://entry/…)
+        for hit in EntryLink.ranges(in: plain) {
+            if let ar = a.range(of: String(plain[hit.range])), a[ar].link == nil { a[ar].link = hit.url }
+        }
         cache.setObject(Box(a), forKey: s as NSString)
         return RichText(source: s, value: a)
     }

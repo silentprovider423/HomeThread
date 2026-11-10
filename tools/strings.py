@@ -133,6 +133,20 @@ EN = {
     "Text": "Text", "Typ": "Type", "Verfasser": "Author", "Wartet auf Abgleich": "Waiting to sync",
     "Weitergeleitet an „%@“": "Forwarded to “%@”", "Weiterleiten an": "Forward To", "Weiterleiten …": "Forward…",
     "Wörter": "Words", "Zeichen": "Characters", "Reagieren": "React",
+    # Mehrfachauswahl, Emoji-Auswahl, Link zum Eintrag, Verlauf beim Bearbeiten, Vorlesen, Doppeltippen
+    "%lld Einträge auf allen Geräten löschen?": "Delete %lld entries on all devices?", "%lld Einträge kopiert": "%lld entries copied",
+    "%lld ausgewählt": "%lld selected", "Aktivität & Reisen": "Activity & Travel", "Alle Emojis …": "All Emoji…", "Aus": "Off",
+    "Auswählen …": "Select…",
+    "Der Link zeigt auf einen Eintrag, den es auf diesem Gerät nicht (mehr) gibt.": "The link points to an entry that does not exist on this device (any more).",
+    "Die Auswahl wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist.":
+        "The selection is copied into the chat you choose. The original stays where it is.",
+    "Dinge": "Objects", "Doppeltippen reagiert mit": "Double-Tap Reacts With", "Emoji suchen": "Search emoji",
+    "Essen & Trinken": "Food & Drink", "Frühere Fassungen (%lld)": "Earlier Versions (%lld)", "Herzen": "Hearts",
+    "Hände & Menschen": "Hands & People",
+    "Jedes Bearbeiten hebt die vorherige Fassung auf, höchstens die letzten 20.": "Every edit keeps the previous version, up to the last 20.",
+    "Kein Emoji gefunden": "No emoji found", "Link zum Eintrag kopieren": "Copy Link to Entry", "Reaktion wählen": "Choose Reaction",
+    "Smileys": "Smileys", "Symbole": "Symbols", "Tiere & Natur": "Animals & Nature", "Vorlesen": "Read Aloud",
+    "Vorlesen beenden": "Stop Reading", "Zuletzt benutzt": "Recently Used", "Eintrag nicht gefunden": "Entry not found",
 }
 SKIP = {"", "%lld", "%lld/%lld", "0", "99+", "@%@"}
 INFOPLIST = {

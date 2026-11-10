@@ -19,6 +19,8 @@ struct ChatHistory: UIViewRepresentable {
     /// nur damit SwiftUI bei neuen Ständen `updateUIView` aufruft
     let version: Int
     var highlight: String?
+    /// Mehrfachauswahl: nil = aus
+    var selection: Set<String>?
     var scrollRequest: ScrollRequest?
     var actions: BubbleActions
 
@@ -38,6 +40,7 @@ struct ChatHistory: UIViewRepresentable {
         // erst übernehmen, wenn die erste Seite gelesen ist (sonst wäre die leere Tabelle schon „positioniert“)
         if timeline.loaded && timeline.version != c.appliedVersion { c.applyTimeline() }
         c.update(highlight: highlight)
+        c.update(selection: selection)
         if let r = scrollRequest, r.token != c.lastScrollToken {
             c.lastScrollToken = r.token
             c.scroll(to: r.id, animated: r.animated)
@@ -52,6 +55,7 @@ struct ChatHistory: UIViewRepresentable {
         var appliedVersion = -1
         var lastScrollToken: UUID?
         private var highlight: String?
+        private var selection: Set<String>?
         private weak var table: ChatTableView?
         private var dataSource: UITableViewDiffableDataSource<Int, String>?
         private var rows: [String: TimelineRow] = [:]
@@ -105,10 +109,11 @@ struct ChatHistory: UIViewRepresentable {
         private func configure(_ cell: UITableViewCell, _ row: TimelineRow) {
             guard let model else { return }
             let hl = highlight == row.id
+            let sel = selection.map { $0.contains(row.id) }
             let actions = self.actions
             cell.backgroundConfiguration = .clear()
             cell.contentConfiguration = UIHostingConfiguration {
-                TimelineRowView(row: row, highlighted: hl, actions: actions).environment(model)
+                TimelineRowView(row: row, highlighted: hl, selected: sel, actions: actions).environment(model)
             }
             .margins(.all, 0)
             .minSize(height: 1)
@@ -253,6 +258,25 @@ struct ChatHistory: UIViewRepresentable {
             dataSource.apply(snap, animatingDifferences: false)
         }
 
+        /// Mehrfachauswahl: nur die Zeilen neu zeichnen, deren Haken sich ändert (beim Ein-/Ausschalten alle sichtbaren)
+        func update(selection new: Set<String>?) {
+            guard new != selection else { return }
+            let old = selection
+            selection = new
+            guard let dataSource, let table else { return }
+            var snap = dataSource.snapshot()
+            let ids: [String]
+            if (old == nil) != (new == nil) {
+                ids = (table.indexPathsForVisibleRows ?? []).compactMap { dataSource.itemIdentifier(for: $0) }
+                heights.removeAll()
+            } else {
+                ids = Array((old ?? []).symmetricDifference(new ?? [])).filter { snap.indexOfItem($0) != nil }
+            }
+            guard !ids.isEmpty else { return }
+            snap.reconfigureItems(ids)
+            dataSource.apply(snap, animatingDifferences: false)
+        }
+
         // MARK: Scrollen
 
         func scroll(to id: String, animated: Bool) {
@@ -331,7 +355,7 @@ struct ChatHistory: UIViewRepresentable {
         // MARK: Menü beim langen Drücken (Reaktionsleiste + Aktionen)
 
         func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-            guard let id = dataSource?.itemIdentifier(for: indexPath), rows[id] != nil else { return nil }
+            guard selection == nil, let id = dataSource?.itemIdentifier(for: indexPath), rows[id] != nil else { return nil }
             return UIContextMenuConfiguration(identifier: id as NSString, previewProvider: nil) { [weak self] _ in
                 guard let self, let row = self.rows[id], let model = self.model else { return nil }
                 return MessageMenuBuilder.uiMenu(row: row, model: model, actions: self.actions, presenter: self.table)
@@ -361,7 +385,7 @@ struct ChatHistory: UIViewRepresentable {
         func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
             guard let pan = g as? UIPanGestureRecognizer, let v = pan.view else { return false }
             let vel = pan.velocity(in: v)
-            return abs(vel.x) > abs(vel.y) * 1.5
+            return selection == nil && abs(vel.x) > abs(vel.y) * 1.5
         }
 
         @objc private func swipe(_ g: UIPanGestureRecognizer) {
@@ -443,6 +467,7 @@ struct ChatHistory: View {
     let timeline: ChatTimeline
     let version: Int
     var highlight: String?
+    var selection: Set<String>?
     var scrollRequest: ScrollRequest?
     var actions: BubbleActions
     @State private var position = ScrollPosition(idType: String.self)
@@ -453,7 +478,7 @@ struct ChatHistory: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(timeline.rows) { row in
-                    TimelineRowView(row: row, highlighted: highlight == row.id, actions: actions)
+                    TimelineRowView(row: row, highlighted: highlight == row.id, selected: selection.map { $0.contains(row.id) }, actions: actions)
                         .onAppear { if row.id == timeline.rows.first?.id && positioned { timeline.loadOlder() } }
                 }
             }

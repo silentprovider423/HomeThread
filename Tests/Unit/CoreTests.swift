@@ -125,4 +125,35 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Avatar.initials("Alex Morgan", person: true), "AM")
         XCTAssertEqual(Avatar.initials("🎉", person: false), "")
     }
+
+    @MainActor func testEntryLinkRoundTripAndRejectsOthers() throws {
+        let m = Message(id: "0a1b2c3d-aaaa-bbbb-cccc-000000000001", roomId: "room-42", authorId: "u", deviceId: nil, kind: .text, body: "x",
+                        payload: Payload(), replyTo: nil, attachment: nil, thumb: nil, createdAt: .now, editedAt: nil, pinned: false,
+                        deleted: false, seq: 1, pending: false, failed: nil)
+        let url = EntryLink.make(m)
+        XCTAssertEqual(url.absoluteString, "homethread://entry/room-42/0a1b2c3d-aaaa-bbbb-cccc-000000000001")
+        XCTAssertEqual(EntryLink.parse(url), ChatRoute(room: "room-42", jump: m.id))
+        for bad in ["https://example.org/entry/a/b", "homethread://room/a/b", "homethread://entry/a", "homethread://entry/a/b/c",
+                    "homethread://entry/a%20b/c", "homethread://entry/../x"] {
+            XCTAssertNil(EntryLink.parse(try XCTUnwrap(URL(string: bad))), bad)
+        }
+        // im Text gefunden und anklickbar gemacht
+        let text = "Siehe \(url.absoluteString) und https://example.org"
+        XCTAssertEqual(EntryLink.ranges(in: text).map(\.url), [url])
+        let rich = RichText.make(text).value
+        XCTAssertTrue(rich.runs.contains { $0.link == url })
+    }
+
+    @MainActor func testEmojiCatalogAndSearch() {
+        let all = EmojiCatalog.sections.flatMap(\.emojis)
+        XCTAssertGreaterThan(all.count, 900)
+        XCTAssertEqual(Set(all.map(\.value)).count, all.count, "kein Emoji doppelt")
+        XCTAssertFalse(all.contains { $0.value.unicodeScalars.contains { (0x1F3FB...0x1F3FF).contains($0.value) } }, "keine nackten Hautfarben")
+        XCTAssertEqual(EmojiCatalog.sections.first?.id, "smileys")
+        XCTAssertTrue(EmojiCatalog.search("thumbs up").contains { $0.value == "👍" })
+        XCTAssertTrue(EmojiCatalog.search("herz").contains { $0.value == "❤️" }, "deutsches Suchwort")
+        XCTAssertTrue(EmojiCatalog.search("Feuer").contains { $0.value == "🔥" })
+        XCTAssertTrue(EmojiCatalog.search("xyzxyz").isEmpty)
+        XCTAssertEqual(EmojiCatalog.search("  ").count, all.count)
+    }
 }

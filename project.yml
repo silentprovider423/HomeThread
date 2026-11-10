@@ -43,6 +43,10 @@ targets:
         NSMicrophoneUsageDescription: "Damit du Sprachnotizen aufnehmen kannst."
         NSLocationWhenInUseUsageDescription: "Damit du deinen aktuellen Ort in einem Chat festhalten kannst."
         NSLocalNetworkUsageDescription: "Verbindung zu deinem HomeThread-Server im Heimnetz."
+        # Links auf Einträge: homethread://entry/<Raum>/<Eintrag>
+        CFBundleURLTypes:
+          - CFBundleURLName: org.homeroll.thread
+            CFBundleURLSchemes: [homethread]
         ITSAppUsesNonExemptEncryption: false
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
@@ -73,6 +77,9 @@ targets:
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, de]
         LSApplicationCategoryType: public.app-category.productivity
+        CFBundleURLTypes:
+          - CFBundleURLName: org.homeroll.thread
+            CFBundleURLSchemes: [homethread]
         NSMicrophoneUsageDescription: "Damit du Sprachnotizen aufnehmen kannst."
         NSLocationUsageDescription: "Damit du deinen aktuellen Ort in einem Chat festhalten kannst."
         NSLocationWhenInUseUsageDescription: "Damit du deinen aktuellen Ort in einem Chat festhalten kannst."

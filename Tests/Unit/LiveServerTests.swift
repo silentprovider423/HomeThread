@@ -221,6 +221,60 @@ final class LiveServerTests: XCTestCase {
         await b.signOut(revoke: false)
     }
 
+    /// Bearbeiten hebt frühere Fassungen auf (reisen im Eintrag mit) – auch das zweite Gerät sieht sie. Dazu: Link öffnen.
+    @MainActor func testEditKeepsHistoryAndLinkOpens() async throws {
+        guard let s = env["THREAD_SERVER"], let t1 = env["THREAD_TOKEN"], let t2 = env["THREAD_TOKEN2"] else { throw XCTSkip("kein Server") }
+        let a = AppModel(), b = AppModel()
+        try await a.loginWithToken(server: s, token: t1, reset: true)
+        try await b.loginWithToken(server: s, token: t2, reset: true)
+        await a.syncNow()
+        let room = try XCTUnwrap(a.createRoom(kind: .chat, title: "Verlauf-Test \(Int.random(in: 1000...9999))"))
+        a.sendText(room: room, "Erste Fassung", replyTo: nil)
+        await a.syncNow()
+        var m = try XCTUnwrap(a.store?.messages(room: room, limit: 5).first)
+        a.editText(m, body: "Zweite Fassung")
+        m = try XCTUnwrap(a.store?.message(m.id))
+        a.editText(m, body: "Zweite Fassung")   // ohne Änderung: kein neuer Eintrag im Verlauf
+        m = try XCTUnwrap(a.store?.message(m.id))
+        a.editText(m, body: "Dritte Fassung")
+        m = try XCTUnwrap(a.store?.message(m.id))
+        XCTAssertEqual(m.body, "Dritte Fassung")
+        XCTAssertEqual(m.payload.history?.map(\.body), ["Erste Fassung", "Zweite Fassung"])
+        await a.syncNow()
+        XCTAssertEqual(a.pending, 0)
+        await b.syncNow()
+        let seen = try XCTUnwrap(b.store?.message(m.id))
+        XCTAssertEqual(seen.body, "Dritte Fassung")
+        XCTAssertEqual(seen.payload.history?.map(\.body), ["Erste Fassung", "Zweite Fassung"])
+        XCTAssertNotNil(seen.editedAt)
+
+        // Link auf den Eintrag: öffnet Raum + Sprung; unbekannter Eintrag meldet „nicht gefunden“; fremde Adressen bleiben unberührt
+        XCTAssertTrue(b.open(link: EntryLink.make(seen)))
+        XCTAssertEqual(b.openRequest, ChatRoute(room: room, jump: m.id))
+        b.openRequest = nil
+        XCTAssertTrue(b.open(link: try XCTUnwrap(URL(string: "homethread://entry/\(room)/gibt-es-nicht"))))
+        XCTAssertNil(b.openRequest)
+        XCTAssertEqual(b.linkNotFound, 1)
+        XCTAssertFalse(b.open(link: try XCTUnwrap(URL(string: "https://example.org"))))
+
+        // viele lange Fassungen: der Verlauf bleibt klein genug für den Server
+        for i in 0..<25 {
+            m = try XCTUnwrap(a.store?.message(m.id))
+            a.editText(m, body: String(repeating: "Wort \(i) ", count: 300))
+        }
+        m = try XCTUnwrap(a.store?.message(m.id))
+        XCTAssertLessThanOrEqual(m.payload.history?.count ?? 0, 20)
+        XCTAssertLessThan(m.payload.json.utf8.count, 32_000)
+        await a.syncNow()
+        XCTAssertEqual(a.pending, 0, "auch große Verläufe nimmt der Server an")
+        XCTAssertNil(a.store?.message(m.id)?.failed)
+
+        a.deleteRoom(room)
+        await a.syncNow()
+        await a.signOut(revoke: false)
+        await b.signOut(revoke: false)
+    }
+
     @MainActor static func makeJPEG() throws -> Data {
         let w = 400, h = 300
         let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),

@@ -126,6 +126,59 @@ final class FlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts[text].waitForExistence(timeout: 5))
     }
 
+    /// Mehrfachauswahl, volle Emoji-Auswahl mit Suche, Bearbeiten mit Verlauf.
+    func testSelectEmojiPickerAndEditHistory() throws {
+        let n = Int.random(in: 1000...9999)
+        newRoom(group: false, name: "UI Auswahl \(run)")
+        send("Eins \(n)")
+        send("Zwei \(n)")
+        send("Drei \(n)")
+        let one = app.staticTexts["Eins \(n)"], two = app.staticTexts["Zwei \(n)"], three = app.staticTexts["Drei \(n)"]
+        XCTAssertTrue(three.waitForExistence(timeout: 5))
+
+        // Emoji-Auswahl: deutsches Suchwort findet das Herz
+        three.press(forDuration: 1.0)
+        app.buttons["Weitere Reaktionen"].tap()
+        app.buttons["Alle Emojis …"].tap()
+        let search = app.textFields["emoji.search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("herz")
+        let heart = app.buttons["emoji.❤️"]
+        XCTAssertTrue(heart.waitForExistence(timeout: 5))
+        heart.tap()
+        XCTAssertTrue(app.buttons["reaction.❤️"].waitForExistence(timeout: 5))
+
+        // Bearbeiten: frühere Fassung steht in den Details
+        three.press(forDuration: 1.0)
+        app.buttons["Bearbeiten"].tap()
+        input.typeText(" neu")
+        app.buttons["input.send"].tap()
+        let edited = app.staticTexts["Drei \(n) neu"]
+        XCTAssertTrue(edited.waitForExistence(timeout: 5))
+        edited.press(forDuration: 1.0)
+        app.buttons["Details"].tap()
+        XCTAssertTrue(app.staticTexts["Frühere Fassungen (1)"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Drei \(n)"].exists)
+        app.buttons["Fertig"].tap()
+
+        // Mehrfachauswahl: zwei wählen, löschen
+        one.press(forDuration: 1.0)
+        app.buttons["Auswählen …"].tap()
+        XCTAssertTrue(app.staticTexts["1 ausgewählt"].waitForExistence(timeout: 5))
+        two.tap()
+        XCTAssertTrue(app.staticTexts["2 ausgewählt"].waitForExistence(timeout: 5))
+        app.buttons["select.delete"].tap()
+        // der Knopf im Bestätigungsdialog, nicht der gleichnamige in der Auswahl-Leiste
+        let confirm = app.buttons.matching(NSPredicate(format: "label == %@ AND identifier != %@", "Löschen", "select.delete")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        XCTAssertTrue(input.waitForExistence(timeout: 5), "nach dem Löschen ist die Eingabeleiste wieder da")
+        XCTAssertFalse(one.exists)
+        XCTAssertFalse(two.exists)
+        XCTAssertTrue(edited.exists)
+    }
+
     func testGroupWithPollChecklistAndInfo() throws {
         let group = "UI Gruppe \(run)"
         newRoom(group: true, name: group)

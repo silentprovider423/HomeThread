@@ -91,9 +91,17 @@ nonisolated struct Payload: Codable, Hashable {
     // Import: Datei gab es nicht mehr / nur die Vorschau des Fotos ist erhalten
     var missing: Bool?
     var previewOnly: Bool?
+    /// Bearbeiten: frühere Fassungen des Textes, älteste zuerst (reist im Eintrag mit, der Server muss nichts dazu wissen)
+    var history: [Edit]?
+
+    struct Edit: Codable, Hashable {
+        var body: String
+        /// Zeitpunkt, ab dem diese Fassung galt (Sekunden seit 1970)
+        var at: Double
+    }
 
     enum CodingKeys: String, CodingKey {
-        case question, options, multi, closed, lat, lon, name, w, h, duration, filename, size, mime, wave, missing
+        case question, options, multi, closed, lat, lon, name, w, h, duration, filename, size, mime, wave, missing, history
         case showInterim = "show_interim"
         case previewOnly = "preview_only"
     }

@@ -36,6 +36,10 @@ enum MessageMenuBuilder {
         if message.kind == .image, let u = row.attachmentURL {
             copy.append(MessageAction(id: "copyImage", title: String(localized: "Kopieren"), icon: "doc.on.doc", kind: .run { Clipboard.copyImage(u) }))
         }
+        if !message.pending && message.failed == nil {
+            copy.append(MessageAction(id: "link", title: String(localized: "Link zum Eintrag kopieren"), icon: "link",
+                                      kind: .run { Clipboard.copy(EntryLink.make(message).absoluteString) }))
+        }
         if message.failed != nil {
             main.append(MessageAction(id: "retry", title: String(localized: "Erneut versuchen"), icon: "arrow.clockwise", kind: .run { model.retry(message) }))
         }
@@ -65,11 +69,18 @@ enum MessageMenuBuilder {
             }
             #endif
         }
+        if message.kind == .text || message.kind == .checklist || message.kind == .poll {
+            let speaking = Speaker.shared.speaking == message.id
+            out.append(MessageAction(id: "speak", title: speaking ? String(localized: "Vorlesen beenden") : String(localized: "Vorlesen"),
+                                     icon: speaking ? "speaker.slash" : "speaker.wave.2",
+                                     kind: .run { Speaker.shared.toggle(id: message.id, text: model.store?.searchText(message) ?? message.body) }))
+        }
         if let item = row.attachmentURL {
             out.append(MessageAction(id: "share", title: String(localized: "Teilen …"), icon: "square.and.arrow.up", kind: .shareFile(item)))
         } else if message.kind == .text {
             out.append(MessageAction(id: "share", title: String(localized: "Teilen …"), icon: "square.and.arrow.up", kind: .shareText(message.body)))
         }
+        end.append(MessageAction(id: "select", title: String(localized: "Auswählen …"), icon: "checkmark.circle", kind: .run { actions.onSelect(message) }))
         end.append(MessageAction(id: "details", title: String(localized: "Details"), icon: "info.circle", kind: .run { actions.onDetails(message) }))
         end.append(MessageAction(id: "delete", title: String(localized: "Löschen"), icon: "trash", destructive: true,
                                  kind: .run { actions.onDelete(message) }))
@@ -86,8 +97,9 @@ enum MessageMenuBuilder {
                 UIAction(title: e, image: Reactions.image(e), state: mine.contains(e) ? .on : .off) { _ in model.toggleReaction(message, emoji: e) }
             })
         }
-        let more = UIMenu(title: String(localized: "Weitere Reaktionen"), image: UIImage(systemName: "face.smiling"),
-                          children: stride(from: 0, to: Reactions.more.count, by: 6).map { palette(Reactions.more[$0..<min($0 + 6, Reactions.more.count)]) })
+        var moreRows: [UIMenuElement] = stride(from: 0, to: Reactions.more.count, by: 6).map { palette(Reactions.more[$0..<min($0 + 6, Reactions.more.count)]) }
+        moreRows.append(UIAction(title: String(localized: "Alle Emojis …"), image: UIImage(systemName: "magnifyingglass")) { _ in actions.onPickEmoji(message) })
+        let more = UIMenu(title: String(localized: "Weitere Reaktionen"), image: UIImage(systemName: "face.smiling"), children: moreRows)
         var children: [UIMenuElement] = [palette(Reactions.quick[...]), more]
         for group in groups(row: row, model: model, actions: actions) {
             children.append(UIMenu(options: .displayInline, children: group.map { a in
@@ -166,6 +178,8 @@ struct MessageMenuPopover: View {
     /// eigene Reaktionen an diesem Eintrag (hervorgehoben)
     let mine: Set<String>
     let react: (String) -> Void
+    /// volle Emoji-Auswahl mit Suche öffnen
+    var pickEmoji: () -> Void = {}
     let close: () -> Void
     @State private var showMore = false
 
@@ -188,6 +202,12 @@ struct MessageMenuPopover: View {
                     ForEach(Reactions.more, id: \.self) { emojiButton($0) }
                 }
                 .padding(.horizontal, 8).padding(.bottom, 4)
+                Button { close(); pickEmoji() } label: {
+                    Label("Alle Emojis …", systemImage: "magnifyingglass").font(.system(size: 13)).foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 14).padding(.vertical, 5).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("menu.allEmojis")
             }
             ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
                 Divider().padding(.vertical, 4)
@@ -249,7 +269,8 @@ private struct MessageMenuRow: View {
 struct ForwardSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    let message: Message
+    /// ein Eintrag oder (Mehrfachauswahl) mehrere, in der Reihenfolge des Verlaufs
+    let messages: [Message]
     var onDone: (Room) -> Void = { _ in }
     @State private var query = ""
 
@@ -281,7 +302,7 @@ struct ForwardSheet: View {
                     }
                     if rooms.isEmpty { Text("Kein Chat gefunden").foregroundStyle(.secondary) }
                 } footer: {
-                    Text("Der Eintrag wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist.")
+                    Text("Die Auswahl wird als Kopie in den gewählten Chat gelegt. Das Original bleibt, wo es ist.")
                 }
             }
             .navigationTitle("Weiterleiten an")
@@ -297,7 +318,11 @@ struct ForwardSheet: View {
 
     private func forward(to room: Room) {
         dismiss()
-        Task { if await model.forward(message, to: room.id) { onDone(room) } }
+        Task {
+            var ok = false
+            for m in messages { if await model.forward(m, to: room.id) { ok = true } }
+            if ok { onDone(room) }
+        }
     }
 }
 
@@ -330,6 +355,22 @@ struct MessageDetailsView: View {
                     LabeledContent("Gemerkt", value: starred ? String(localized: "Ja") : String(localized: "Nein"))
                     if !reactions.isEmpty {
                         LabeledContent("Reaktionen", value: reactions.map { $0.count > 1 ? "\($0.emoji) \($0.count)" : $0.emoji }.joined(separator: "  "))
+                    }
+                }
+                if let history = m.payload.history, !history.isEmpty {
+                    Section {
+                        ForEach(Array(history.reversed().enumerated()), id: \.offset) { _, e in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(Date(timeIntervalSince1970: e.at).formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Text(verbatim: e.body).textSelection(.enabled)
+                            }
+                            .accessibilityIdentifier("details.version")
+                        }
+                    } header: {
+                        Text("Frühere Fassungen (\(history.count))")
+                    } footer: {
+                        Text("Jedes Bearbeiten hebt die vorherige Fassung auf, höchstens die letzten 20.")
                     }
                 }
                 Section {
@@ -427,4 +468,131 @@ enum MediaSaver {
         return (try? FileManager.default.copyItem(at: url, to: dest)) != nil
     }
     #endif
+}
+
+/// Alle Emojis mit Suche (Unicode-Namen, deutsche Suchwörter), „Zuletzt benutzt“ oben.
+struct EmojiPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var onPick: (String) -> Void
+    @State private var query = ""
+    @FocusState private var searching: Bool
+
+    private static func title(_ id: String) -> LocalizedStringKey {
+        switch id {
+        case "smileys": "Smileys"
+        case "hearts": "Herzen"
+        case "people": "Hände & Menschen"
+        case "nature": "Tiere & Natur"
+        case "food": "Essen & Trinken"
+        case "travel": "Aktivität & Reisen"
+        case "objects": "Dinge"
+        default: "Symbole"
+        }
+    }
+
+    private let columns = [GridItem(.adaptive(minimum: 40), spacing: 4)]
+
+    var body: some View {
+        let hits = query.trimmingCharacters(in: .whitespaces).isEmpty ? nil : EmojiCatalog.search(query)
+        let recent = EmojiCatalog.recent
+        NavigationStack {
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Emoji suchen", text: $query)
+                        .textFieldStyle(.plain)
+                        .focused($searching)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("emoji.search")
+                    if !query.isEmpty {
+                        Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(Text("Suche leeren"))
+                    }
+                }
+                .padding(.horizontal, 12).padding(.vertical, 9)
+                .background(Theme.fieldBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.horizontal, 16).padding(.bottom, 8)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 14, pinnedViews: []) {
+                        if let hits {
+                            if hits.isEmpty {
+                                Text("Kein Emoji gefunden").foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.top, 40)
+                            } else {
+                                grid(hits.map(\.value))
+                            }
+                        } else {
+                            if !recent.isEmpty { section("Zuletzt benutzt", recent) }
+                            ForEach(EmojiCatalog.sections, id: \.id) { s in section(Self.title(s.id), s.emojis.map(\.value)) }
+                        }
+                    }
+                    .padding(.horizontal, 16).padding(.bottom, 16)
+                }
+            }
+            .navigationTitle("Reaktion wählen")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } } }
+        }
+        #if os(macOS)
+        .frame(width: 460, height: 520)
+        .onAppear { searching = true }
+        #endif
+    }
+
+    private func section(_ title: LocalizedStringKey, _ emojis: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+            grid(emojis)
+        }
+    }
+
+    private func grid(_ emojis: [String]) -> some View {
+        LazyVGrid(columns: columns, spacing: 4) {
+            ForEach(emojis, id: \.self) { e in
+                Button {
+                    EmojiCatalog.noteUsed(e)
+                    onPick(e)
+                    dismiss()
+                } label: {
+                    Text(e).font(.system(size: 28)).frame(width: 40, height: 40).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("emoji.\(e)")
+            }
+        }
+    }
+}
+
+/// Leiste unten im Chat während der Mehrfachauswahl: Anzahl, Kopieren, Weiterleiten, Löschen, Abbrechen.
+struct SelectionBar: View {
+    let count: Int
+    var onCopy: () -> Void
+    var onForward: () -> Void
+    var onDelete: () -> Void
+    var onCancel: () -> Void
+
+    var body: some View {
+        HStack(spacing: 18) {
+            Button("Abbrechen", action: onCancel).accessibilityIdentifier("select.cancel")
+            Spacer()
+            Text("\(count) ausgewählt").font(.subheadline.weight(.semibold)).monospacedDigit()
+                .accessibilityIdentifier("select.count")
+            Spacer()
+            Button(action: onCopy) { Image(systemName: "doc.on.doc") }
+                .help(Text("Kopieren")).accessibilityLabel(Text("Kopieren")).accessibilityIdentifier("select.copy")
+            Button(action: onForward) { Image(systemName: "arrowshape.turn.up.right") }
+                .help(Text("Weiterleiten …")).accessibilityLabel(Text("Weiterleiten …")).accessibilityIdentifier("select.forward")
+            Button(role: .destructive, action: onDelete) { Image(systemName: "trash") }
+                .help(Text("Löschen")).accessibilityLabel(Text("Löschen")).accessibilityIdentifier("select.delete")
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Theme.accent)
+        .font(.body)
+        .disabled(false)
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(Theme.barBackground)
+        .overlay(alignment: .top) { Theme.hairline.frame(height: 0.5) }
+    }
 }

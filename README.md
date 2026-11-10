@@ -34,7 +34,7 @@ Everything is stored on the device first (offline-first) and synced with a small
 - Group info: picture, rename, description, people list (add/remove people of your server), media & files, starred, polls, checklists, places, convert chat ⇄ group, save chat as text file, delete all entries, delete group
 
 **Entries**
-- Text with links and **bold**/_italic_, edit your own text
+- Text with links and **bold**/_italic_, edit your own text – **earlier versions are kept** (last 20, shown in the entry's details)
 - **Voice notes** with waveform (record, discard, add; playback with progress)
 - **Photos and videos** (camera on iPhone, photo library, up to 10 at once) – photos are resized to 2560 px and stored **without EXIF/location data**
 - **Files** of any type (Quick Look preview)
@@ -43,7 +43,11 @@ Everything is stored on the device first (offline-first) and synced with a small
 - **Checklists** (tick off, add items inline, hide done items)
 - **Entry menu**: long-press an entry on iPhone (reaction bar on top, actions below); on the Mac hover an entry and click the arrow next to it, or right-click
 - **Reply/quote** (menu or swipe right on iPhone), tap the quote to jump to the original
-- **Reactions** (👍 👎 ❤️ 😂 😢 🙏 + more), **star** entries, **pin** entries to the top bar of a room
+- **Reactions** (👍 👎 ❤️ 😂 😢 🙏 + more, or **all emoji with search** – English names and common German words, recently used on top), **star** entries, **pin** entries to the top bar of a room
+- **Double-tap** an entry on iPhone for a quick reaction (choose the emoji or turn it off in Settings)
+- **Select several entries** (menu → *Select…*) to copy, forward or delete them at once
+- **Link to an entry** (`homethread://entry/…`): copy it from the menu and paste it into another note – tapping it jumps to that entry
+- **Read aloud** (on the device, language detected from the text)
 - **Forward** an entry as a copy into another chat (attachments are copied too), **details** (kind, author, device, created/edited, sync state, file size, dimensions …; on iPhone also swipe left)
 - Copy, share, **save** photos and videos to Photos (iPhone) or *Save As…* (Mac), delete on all devices, retry failed uploads
 

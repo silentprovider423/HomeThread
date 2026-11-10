@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Ziel beim Öffnen eines Chats (optional mit Sprung zu einem Eintrag).
-struct ChatRoute: Hashable {
+nonisolated struct ChatRoute: Hashable, Sendable {
     var room: String
     var jump: String?
 }
@@ -38,6 +38,9 @@ struct PhoneRoot: View {
         .animation(.easeInOut(duration: 0.2), value: path.isEmpty)
         .tint(Theme.accent)
         .onChange(of: model.debugTab) { _, t in if let t { tab = t; model.debugTab = nil } }
+        .onChange(of: model.openRequest) { _, r in
+            if let r { open(r.room, r.jump ?? ""); model.openRequest = nil }
+        }
         .onChange(of: model.debugOpen, initial: true) { _, t in
             guard let t, let s = model.summaries(archived: false).first(where: { $0.room.title == t }) else { return }
             tab = 0
@@ -95,6 +98,7 @@ struct PhoneTabBar: View {
 struct AppRoot: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var phase
+    @State private var shownNotFound = 0
 
     var body: some View {
         Group {
@@ -110,6 +114,14 @@ struct AppRoot: View {
         }
         .preferredColorScheme(model.colorScheme)
         .tint(Theme.accent)
+        // Links auf Einträge (homethread://entry/…): im Verlauf angetippt oder von außen geöffnet
+        .environment(\.openURL, OpenURLAction { url in model.open(link: url) ? .handled : .systemAction })
+        .onOpenURL { model.open(link: $0) }
+        .alert("Eintrag nicht gefunden", isPresented: Binding(get: { model.linkNotFound > shownNotFound }, set: { if !$0 { shownNotFound = model.linkNotFound } })) {
+            Button("OK") { shownNotFound = model.linkNotFound }
+        } message: {
+            Text("Der Link zeigt auf einen Eintrag, den es auf diesem Gerät nicht (mehr) gibt.")
+        }
         .onChange(of: phase, initial: true) { _, p in
             if p == .active && model.session != nil {
                 model.syncSoon()

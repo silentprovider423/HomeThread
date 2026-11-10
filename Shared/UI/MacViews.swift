@@ -44,6 +44,9 @@ struct MacRoot: View {
         .ignoresSafeArea()
         .sheet(item: $newRoom) { m in NewRoomFlow(mode: m) { selection = $0; section = .chats } }
         .onChange(of: model.requestNew) { _, m in if let m { newRoom = m; model.requestNew = nil } }
+        .onChange(of: model.openRequest) { _, r in
+            if let r { open(r.room, r.jump ?? ""); model.openRequest = nil }
+        }
         .onChange(of: selection) { _, _ in jump = nil }
         .onChange(of: section) { _, s in if s != .settings { query = "" } }
         .onChange(of: model.debugOpen, initial: true) { _, t in
@@ -118,8 +121,14 @@ struct MacRoot: View {
     private func open(_ room: String, _ message: String) {
         section = room.isEmpty ? section : (model.store?.room(room)?.archived == true ? .archive : .chats)
         query = ""
+        let changes = selection != room
         selection = room
-        jump = message.isEmpty ? nil : message
+        if changes {
+            // der Raumwechsel setzt den Sprung zurück (onChange oben) – deshalb erst danach setzen
+            Task { @MainActor in jump = message.isEmpty ? nil : message }
+        } else {
+            jump = message.isEmpty ? nil : message
+        }
     }
 }
 

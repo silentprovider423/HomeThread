@@ -14,12 +14,20 @@ struct BubbleActions {
     var onDetails: (Message) -> Void = { _ in }
     /// Bild/Video/Datei sichern (iPhone: Fotos, Mac: „Sichern unter“)
     var onSave: (Message) -> Void = { _ in }
+    /// Mehrfachauswahl mit diesem Eintrag beginnen
+    var onSelect: (Message) -> Void = { _ in }
+    /// Eintrag in der laufenden Mehrfachauswahl an-/abwählen
+    var onToggleSelect: (Message) -> Void = { _ in }
+    /// volle Emoji-Auswahl für eine Reaktion öffnen
+    var onPickEmoji: (Message) -> Void = { _ in }
 }
 
 /// Eine Zeile des Verlaufs: (iPhone) Datums-Pille bei Tageswechsel, ggf. „Neu von anderem Gerät“, dann die Bubble.
 struct TimelineRowView: View {
     let row: TimelineRow
     var highlighted = false
+    /// Mehrfachauswahl: nil = aus, sonst ob dieser Eintrag gewählt ist
+    var selected: Bool?
     var actions = BubbleActions()
 
     var body: some View {
@@ -28,7 +36,22 @@ struct TimelineRowView: View {
                 DayPill(text: pill).padding(.top, 12).padding(.bottom, 4)
             }
             if let n = row.unreadCount { NewFromOtherDeviceLine(count: n) }
-            MessageBubble(row: row, highlighted: highlighted, actions: actions)
+            if let selected {
+                // Auswahl: Haken links, die ganze Zeile schaltet um; die Bubble selbst reagiert solange nicht
+                HStack(spacing: 0) {
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3).foregroundStyle(selected ? Theme.accent : Color.secondary)
+                        .padding(.leading, 12)
+                    MessageBubble(row: row, highlighted: highlighted || selected, actions: actions).allowsHitTesting(false)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { actions.onToggleSelect(row.message) }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                .accessibilityIdentifier("select.row")
+            } else {
+                MessageBubble(row: row, highlighted: highlighted, actions: actions)
+            }
         }
         #if os(iOS)
         .coordinateSpace(.named("row"))
@@ -132,6 +155,12 @@ struct MessageBubble: View {
         .contextMenu { menu }
         #else
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("row")) } action: { BubbleFrames.frames[row.id] = $0 }
+        // Doppeltippen = Schnellreaktion (Einstellungen › Darstellung; am Mac wählt der Doppelklick ein Wort aus)
+        .onTapGesture(count: 2) {
+            guard !model.quickReaction.isEmpty else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            model.toggleReaction(message, emoji: model.quickReaction)
+        }
         #endif
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("bubble.\(message.kind.rawValue)")
@@ -252,6 +281,8 @@ struct MessageBubble: View {
     private var menu: some View {
         Menu {
             ForEach(Reactions.quick + Reactions.more, id: \.self) { e in Button(e) { model.toggleReaction(message, emoji: e) } }
+            Divider()
+            Button("Alle Emojis …") { actions.onPickEmoji(message) }
         } label: { Label("Reagieren", systemImage: "face.smiling") }
         ForEach(Array(actionGroups.enumerated()), id: \.offset) { _, group in
             Divider()
@@ -277,6 +308,7 @@ struct MessageBubble: View {
         .popover(isPresented: $showMenu, arrowEdge: .bottom) {
             MessageMenuPopover(groups: actionGroups, mine: Set(row.reactions.filter(\.mine).map(\.emoji)),
                                react: { model.toggleReaction(message, emoji: $0); showMenu = false },
+                               pickEmoji: { actions.onPickEmoji(message) },
                                close: { showMenu = false })
         }
     }
