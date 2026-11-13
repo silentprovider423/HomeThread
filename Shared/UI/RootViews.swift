@@ -173,6 +173,7 @@ enum DebugLogin {
         model.debugShowInfo = env["THREAD_SHOW"] == "info"
         if let open = env["THREAD_OPEN"], !open.isEmpty { model.debugOpen = open }
         if let menu = env["THREAD_MENU"], !menu.isEmpty { model.debugMenu = menu }
+        if let n = env["THREAD_NEW"] { model.requestNew = NewRoomFlow.Mode(rawValue: n) }
         if let show = env["THREAD_SHOW"] { model.debugTab = ["starred": 1, "settings": 2][show] }
     }
 }

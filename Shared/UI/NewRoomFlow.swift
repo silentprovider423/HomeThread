@@ -41,12 +41,20 @@ struct NewRoomFlow: View {
         }
         .task { if model.users.isEmpty { await model.refreshUsersAndDevices() } }
         #if os(macOS)
-        .frame(minWidth: 420, minHeight: 460)
+        // feste Größe: ein Blatt, das mit seinem Inhalt mitwächst, schaukelte sich mit dem großen Hauptfenster
+        // (viele Chats) zu endlosen Layout-Durchläufen auf – das Programm hing und stürzte beim Schließen ab
+        .frame(width: 440, height: 520)
         #endif
     }
 
     private var memberPicker: some View {
         List {
+            #if os(macOS)
+            // Mac: Suchfeld in der Liste statt `.searchable` (das hängt im Blatt ein Suchfeld an die Symbolleiste)
+            if others.count > 6 {
+                TextField("Suchen", text: $query).textFieldStyle(.roundedBorder)
+            }
+            #endif
             Section {
                 if others.isEmpty {
                     Text("Auf deinem Server gibt es noch keine weiteren Personen. Du kannst die Gruppe trotzdem als Themen-Raum für dich anlegen und später Personen hinzufügen.")
@@ -73,7 +81,9 @@ struct NewRoomFlow: View {
                 Text("Personen auswählen")
             }
         }
+        #if os(iOS)
         .searchable(text: $query, prompt: Text("Suchen"))
+        #endif
         .navigationTitle("Neue Gruppe")
     }
 

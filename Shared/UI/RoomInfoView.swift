@@ -253,7 +253,7 @@ struct AddPersonSheet: View {
             .task { await model.refreshUsersAndDevices() }
         }
         #if os(macOS)
-        .frame(minWidth: 380, minHeight: 380)
+        .frame(width: 380, height: 380)
         #endif
     }
 }

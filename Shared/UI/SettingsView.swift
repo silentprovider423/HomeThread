@@ -174,7 +174,7 @@ struct ChangePasswordView: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 400, minHeight: 300)
+        .frame(width: 400, height: 300)
         #endif
     }
 }

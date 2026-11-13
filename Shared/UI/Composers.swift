@@ -60,7 +60,7 @@ struct PollComposer: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 440, minHeight: 480)
+        .frame(width: 440, height: 480)
         #endif
     }
 }
@@ -108,7 +108,7 @@ struct ChecklistComposer: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 420, minHeight: 440)
+        .frame(width: 420, height: 440)
         #endif
     }
 }
@@ -221,7 +221,7 @@ struct LocationPicker: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 480, minHeight: 560)
+        .frame(width: 480, height: 560)
         #endif
     }
 

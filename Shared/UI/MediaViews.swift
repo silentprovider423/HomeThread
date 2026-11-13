@@ -51,7 +51,7 @@ struct MediaViewer: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 640, minHeight: 480)
+        .frame(minWidth: 640, idealWidth: 900, maxWidth: .infinity, minHeight: 480, idealHeight: 640, maxHeight: .infinity)
         #endif
     }
 }

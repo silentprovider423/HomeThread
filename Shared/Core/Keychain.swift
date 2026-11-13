@@ -48,6 +48,50 @@ struct Session: Codable, Equatable {
         return h.prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 
+    #if os(macOS)
+    // Mac: Anmeldung als Datei (nur für dich lesbar) statt im Schlüsselbund. Ohne Entwickler-Signatur fragt macOS
+    // sonst nach jeder neuen Version nach dem Schlüsselbund-Passwort – „Immer erlauben“ gilt nur für den einen Bau.
+    // Debug-Builds haben eine eigene Datei und rühren die Anmeldung der installierten App nie an.
+    static var fileURL: URL {
+        #if DEBUG
+        let name = "session-debug.json"
+        #else
+        let name = "session.json"
+        #endif
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("HomeThread/\(name)")
+    }
+
+    static func load() -> Session? {
+        if let d = try? Data(contentsOf: fileURL) { return try? JSONDecoder().decode(Session.self, from: d) }
+        #if DEBUG
+        return nil
+        #else
+        // einmaliger Umzug aus dem Schlüsselbund (letzte Abfrage), danach nur noch die Datei
+        guard let s = Keychain.load(), let d = s.data(using: .utf8), let session = try? JSONDecoder().decode(Session.self, from: d) else { return nil }
+        session.store()
+        if FileManager.default.fileExists(atPath: fileURL.path) { Keychain.delete() }
+        return session
+        #endif
+    }
+
+    func store() {
+        guard !ephemeral, let d = try? JSONEncoder().encode(self) else { return }
+        let url = Self.fileURL, fm = FileManager.default
+        try? fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        // erst mit Rechten 600 anlegen, dann schreiben – die Datei ist nie für andere Benutzer lesbar
+        if !fm.fileExists(atPath: url.path) { fm.createFile(atPath: url.path, contents: nil, attributes: [.posixPermissions: 0o600]) }
+        try? fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        try? d.write(to: url)
+    }
+
+    static func clear() {
+        try? FileManager.default.removeItem(at: fileURL)
+        #if !DEBUG
+        Keychain.delete()
+        #endif
+    }
+    #else
     static func load() -> Session? {
         guard let s = Keychain.load(), let d = s.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(Session.self, from: d)
@@ -59,6 +103,7 @@ struct Session: Codable, Equatable {
     }
 
     static func clear() { Keychain.delete() }
+    #endif
 }
 
 /// Authenticator-Code (RFC 6238) – nur für die Debug-Anmeldung und Tests; die App selbst kennt kein Geheimnis.
