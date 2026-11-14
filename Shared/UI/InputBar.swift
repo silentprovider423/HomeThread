@@ -90,10 +90,18 @@ struct InputBar: View {
                 .focused($focused)
                 .accessibilityIdentifier("input.text")
                 .onKeyPress(.return, phases: .down) { press in
-                    if model.returnSends && !press.modifiers.contains(.shift) || press.modifiers.contains(.command) {
-                        submit(); return .handled
+                    // ⇧↩ (bzw. ⌥↩) = neue Zeile an der Schreibmarke; ↩ legt ab (oder ⌘↩, je nach Einstellung)
+                    if press.modifiers.contains(.shift) || press.modifiers.contains(.option)
+                        || (!model.returnSends && !press.modifiers.contains(.command)) {
+                        if let editor = NSApp.keyWindow?.firstResponder as? NSTextView {
+                            editor.insertNewlineIgnoringFieldEditor(nil)
+                        } else {
+                            text += "\n"
+                        }
+                        return .handled
                     }
-                    return .ignored
+                    submit()
+                    return .handled
                 }
 
             Button {
@@ -121,10 +129,10 @@ struct InputBar: View {
             .accessibilityIdentifier("input.attach")
             .accessibilityLabel(Text("Anhang"))
 
-            TextField("Neue Nachricht", text: $text, axis: .vertical)
-                .lineLimit(1...8)
-                .textFieldStyle(.plain)
-                .focused($focused)
+            GrowingTextView(text: $text, placeholder: "Neue Nachricht", maxLines: 8)
+                .overlay(alignment: .topLeading) {
+                    if text.isEmpty { Text("Neue Nachricht").foregroundStyle(.tertiary).allowsHitTesting(false) }
+                }
                 .padding(.horizontal, 12).padding(.vertical, 7.5)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.chatBarField))
                 .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 0.5))

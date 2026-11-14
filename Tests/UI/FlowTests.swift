@@ -179,6 +179,24 @@ final class FlowTests: XCTestCase {
         XCTAssertTrue(edited.exists)
     }
 
+    /// Sehr lange Notiz: das Feld wächst höchstens bis 8 Zeilen, der Ablegen-Knopf bleibt sichtbar und erreichbar.
+    func testLongNoteKeepsSendButtonVisible() throws {
+        newRoom(group: false, name: "UI Lang \(run)")
+        input.tap()
+        let lines = (1...20).map { "Zeile \($0) mit etwas mehr Text, damit es auch umbricht" }
+        input.typeText(lines.joined(separator: "\n"))
+        let send = app.buttons["input.send"]
+        XCTAssertTrue(send.waitForExistence(timeout: 5))
+        XCTAssertTrue(send.isHittable, "Ablegen-Knopf erreichbar")
+        let screen = app.windows.firstMatch.frame
+        XCTAssertLessThanOrEqual(send.frame.maxY, screen.maxY)
+        XCTAssertLessThan(input.frame.height, screen.height * 0.4, "Feld wächst nicht über die halbe Seite")
+        XCTAssertGreaterThanOrEqual(send.frame.minY, input.frame.minY - 1, "Knopf liegt nicht über dem Feld")
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.lifetime = .keepAlways; add(shot)
+        send.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Zeile 20")).firstMatch.waitForExistence(timeout: 5))
+    }
+
     func testGroupWithPollChecklistAndInfo() throws {
         let group = "UI Gruppe \(run)"
         newRoom(group: true, name: group)
