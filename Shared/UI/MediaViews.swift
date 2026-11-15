@@ -8,7 +8,6 @@ struct MediaViewer: View {
     let message: Message
     @State private var url: URL?
     @State private var player: AVPlayer?
-    @State private var scale: CGFloat = 1
 
     var body: some View {
         NavigationStack {
@@ -17,12 +16,8 @@ struct MediaViewer: View {
                 if message.kind == .video {
                     if let player { VideoPlayer(player: player).ignoresSafeArea(edges: .bottom) } else { ProgressView().tint(.white) }
                 } else if let url {
-                    LocalImage(url: url, maxPixel: 3000, contentMode: .fit)
-                        .scaleEffect(scale)
-                        .gesture(MagnifyGesture().onChanged { scale = max(1, min(5, $0.magnification)) }.onEnded { _ in
-                            withAnimation { if scale < 1.2 { scale = 1 } }
-                        })
-                        .onTapGesture(count: 2) { withAnimation { scale = scale > 1 ? 1 : 2.5 } }
+                    ZoomableImage(url: url)
+                        .ignoresSafeArea(edges: .bottom)
                 } else {
                     // Vorschau zeigen, bis das Original da ist
                     LocalImage(url: message.thumb.flatMap { model.store?.fileURL($0) }, maxPixel: 800, contentMode: .fit)
