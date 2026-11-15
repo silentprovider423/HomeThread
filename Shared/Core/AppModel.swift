@@ -66,7 +66,11 @@ final class AppModel {
 
     var colorScheme: ColorScheme? { appearance == 1 ? .light : appearance == 2 ? .dark : nil }
 
+    /// laufende App (für Kurzbefehle/Siri, die im App-Prozess laufen)
+    @ObservationIgnored nonisolated(unsafe) static weak var current: AppModel?
+
     init() {
+        Self.current = self
         if let s = Session.load() { open(s) }
         watchNetwork()
     }
@@ -153,6 +157,7 @@ final class AppModel {
         stopTimer()
         syncTask?.cancel()
         if revoke { try? await api?.logout() }
+        await SpotlightIndex.clear(store)
         if let s = session, !s.ephemeral { Session.clear() }
         if let root = store?.root { try? FileManager.default.removeItem(at: root) }
         store = nil
@@ -209,6 +214,7 @@ final class AppModel {
             syncState = .idle
             if users.isEmpty || Int.random(in: 0..<20) == 0 { await refreshUsersAndDevices() }
             await downloadMissing(api, store)
+            await SpotlightIndex.refresh(store)
         } catch let e as APIError {
             if e.code == "unauthorized" {
                 await signOut(revoke: false, reason: String(localized: "Dieses Gerät wurde abgemeldet. Bitte neu anmelden."))

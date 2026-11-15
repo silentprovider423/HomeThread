@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Eingabeleiste: „+“ (Anhänge), Textfeld, Kamera/Mikro bzw. Ablegen-Pfeil; darüber Antwort- oder Bearbeiten-Leiste.
 struct InputBar: View {
-    enum Attach { case camera, photos, location, poll, checklist, file }
+    enum Attach { case camera, scan, photos, location, poll, checklist, file }
 
     @Environment(AppModel.self) private var model
     let roomId: String
@@ -21,6 +21,7 @@ struct InputBar: View {
         var a: [(Attach, LocalizedStringKey, String)] = []
         #if os(iOS)
         a.append((.camera, "Foto oder Video aufnehmen", "camera.fill"))
+        a.append((.scan, "Dokument scannen", "doc.viewfinder"))
         #endif
         a += [(.photos, "Aus Fotos wählen", "photo.on.rectangle"), (.location, "Ort festhalten", "mappin.and.ellipse"),
               (.poll, "Abstimmung anlegen", "chart.bar.xaxis"), (.checklist, "Checkliste anlegen", "checklist"),
@@ -40,6 +41,7 @@ struct InputBar: View {
                 if let e = editing {
                     banner(title: String(localized: "Bearbeiten"), text: e.preview, icon: "pencil") { editing = nil; text = "" }
                 }
+                if !mentionHits.isEmpty && !recorder.isRecording { mentionBar }
                 if recorder.isRecording { recordingBar } else { inputRow }
             }
             #if os(macOS)
@@ -66,6 +68,44 @@ struct InputBar: View {
         .onChange(of: text) { _, t in if editing == nil { model.saveDraft(roomId, t) } }
     }
 
+    // MARK: Erwähnungen (@Name) in Gruppen
+
+    /// angefangenes „@…“ am Ende des Textes (nur in Gruppen mit weiteren Personen)
+    private var mentionQuery: String? {
+        guard let store = model.store, store.room(roomId)?.kind == .group, let at = text.lastIndex(of: "@") else { return nil }
+        if at > text.startIndex, !text[text.index(before: at)].isWhitespace { return nil }
+        let q = String(text[text.index(after: at)...])
+        return q.contains(where: \.isNewline) || q.count > 30 ? nil : q
+    }
+
+    private var mentionHits: [Member] {
+        guard let q = mentionQuery, let store = model.store else { return [] }
+        return store.members(room: roomId).filter { $0.userId != model.me }
+            .filter { q.isEmpty || $0.displayName.localizedStandardContains(q) || $0.username.localizedStandardContains(q) }
+            .prefix(5).map { $0 }
+    }
+
+    private var mentionBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(mentionHits) { m in
+                    Button {
+                        if let at = text.lastIndex(of: "@") { text = String(text[..<at]) + "@" + m.displayName + " " }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Avatar(title: m.displayName, size: 22, colorKey: m.userId, person: true)
+                            Text(m.displayName).font(.subheadline)
+                        }
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Capsule().fill(Theme.fieldBackground))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("mention.\(m.username)")
+                }
+            }
+        }
+    }
+
     private var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && editing == nil }
 
     private var inputRow: some View {
@@ -89,6 +129,11 @@ struct InputBar: View {
                 .font(.system(size: 14))
                 .focused($focused)
                 .accessibilityIdentifier("input.text")
+                // ⌘V mit Bild oder Dateien in der Zwischenablage: als Foto bzw. Datei ablegen (Text fügt das Feld selbst ein)
+                .onKeyPress(characters: ["v"], phases: .down) { press in
+                    guard press.modifiers.contains(.command), pasteAttachments() else { return .ignored }
+                    return .handled
+                }
                 .onKeyPress(.return, phases: .down) { press in
                     // ⇧↩ (bzw. ⌥↩) = neue Zeile an der Schreibmarke; ↩ legt ab (oder ⌘↩, je nach Einstellung)
                     if press.modifiers.contains(.shift) || press.modifiers.contains(.option)
@@ -233,6 +278,24 @@ struct InputBar: View {
         }
         text = ""
     }
+
+    #if os(macOS)
+    /// Dateien bzw. ein Bild aus der Zwischenablage ablegen. false = nichts davon da (normales Einfügen).
+    private func pasteAttachments() -> Bool {
+        let pb = NSPasteboard.general
+        if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
+            for u in urls { model.sendFile(room: roomId, url: u, replyTo: replyTo?.id) }
+            replyTo = nil
+            return true
+        }
+        // reiner Text hat Vorrang (z. B. aus einer Textverarbeitung, die zusätzlich ein Bild mitliefert)
+        guard pb.string(forType: .string) == nil, let img = NSImage(pasteboard: pb), let tiff = img.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff), let jpg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.92]) else { return false }
+        model.sendImage(room: roomId, data: jpg, replyTo: replyTo?.id)
+        replyTo = nil
+        return true
+    }
+    #endif
 
     private func startRecording() {
         Task {

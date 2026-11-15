@@ -11,8 +11,8 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: minimal
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
-    MARKETING_VERSION: "1.3.3"
-    CURRENT_PROJECT_VERSION: "9"
+    MARKETING_VERSION: "1.4.0"
+    CURRENT_PROJECT_VERSION: "10"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     SWIFT_EMIT_LOC_STRINGS: YES
@@ -38,6 +38,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         NSCameraUsageDescription: "Damit du Fotos und Videos direkt in einen Chat aufnehmen kannst."
+        NSFaceIDUsageDescription: "Damit du HomeThread mit Face ID sperren und entsperren kannst."
         NSPhotoLibraryUsageDescription: "Damit du Fotos und Videos in einem Chat ablegen kannst."
         NSPhotoLibraryAddUsageDescription: "Damit du Fotos und Videos aus einem Chat in deiner Fotomediathek sichern kannst."
         NSMicrophoneUsageDescription: "Damit du Sprachnotizen aufnehmen kannst."

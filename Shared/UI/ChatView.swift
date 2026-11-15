@@ -38,13 +38,15 @@ struct ChatView: View {
     @State private var confirmDeleteSelection = false
 
     enum Sheet: Identifiable {
-        case poll, checklist, location, camera, media(Message), forward([Message]), details(Message), emoji(Message)
+        case poll, checklist, location, camera, scan, media(Message), forward([Message]), details(Message), emoji(Message), remind(Message)
         var id: String {
             switch self {
             case .poll: return "poll"
             case .checklist: return "checklist"
             case .location: return "location"
             case .camera: return "camera"
+            case .scan: return "scan"
+            case .remind(let m): return "remind.\(m.id)"
             case .media(let m): return "media.\(m.id)"
             case .forward(let m): return "forward.\(m.first?.id ?? "")"
             case .emoji(let m): return "emoji.\(m.id)"
@@ -75,7 +77,7 @@ struct ChatView: View {
 
         return ChatHistory(model: model, timeline: timeline, version: timeline.version, highlight: highlight,
                            selection: selection, scrollRequest: scrollRequest, actions: actions)
-            .background(Theme.chatBackground)
+            .background(ChatBackground(room: roomId, version: model.revision))
             .overlay(alignment: .top) {
                 if let notice {
                     Text(notice).font(.subheadline.weight(.semibold))
@@ -97,6 +99,7 @@ struct ChatView: View {
                 InputBar(roomId: roomId, text: $text, replyTo: $replyTo, editing: $editing) { a in
                     switch a {
                     case .camera: sheet = .camera
+                    case .scan: sheet = .scan
                     case .photos: showPhotos = true
                     case .location: sheet = .location
                     case .poll: sheet = .poll
@@ -106,6 +109,8 @@ struct ChatView: View {
                 }
                 }
             }
+            // Dateien und Bilder in den Chat ziehen (Mac: aus dem Finder oder Fotos; iPad: aus anderen Apps)
+            .onDrop(of: [.fileURL, .image], isTargeted: nil) { providers in dropped(providers) }
             // jede Änderung der Datenbank: Fenster im Hintergrund neu lesen, nur geänderte Zeilen neu zeichnen
             .onChange(of: model.revision) { _, _ in timeline.reload() }
             .onChange(of: timeline.lastID) { _, _ in model.markSeen(roomId) }
@@ -171,7 +176,8 @@ struct ChatView: View {
                           if s.contains(m.id) { s.remove(m.id) } else { s.insert(m.id) }
                           selection = s
                       },
-                      onPickEmoji: { sheet = .emoji($0) })
+                      onPickEmoji: { sheet = .emoji($0) },
+                      onRemind: { sheet = .remind($0) })
     }
 
     /// gewählte Einträge in der Reihenfolge des Verlaufs
@@ -419,11 +425,42 @@ struct ChatView: View {
                 selection = nil
                 show(String(localized: "Weitergeleitet an „\(room.title)“"))
             }
+        case .remind(let m):
+            ReminderSheet(message: m, roomTitle: model.store?.room(roomId)?.title ?? "HomeThread") { show($0) }
+        case .scan:
+            #if os(iOS)
+            DocumentScanner { url in model.sendFile(room: roomId, url: url, replyTo: replyTo?.id); replyTo = nil }
+                .ignoresSafeArea()
+            #else
+            EmptyView()
+            #endif
         case .emoji(let m):
             EmojiPickerSheet { model.toggleReaction(m, emoji: $0) }
         case .details(let m):
             MessageDetailsView(message: m)
         }
+    }
+
+    private func dropped(_ providers: [NSItemProvider]) -> Bool {
+        let reply = replyTo?.id
+        var handled = false
+        for p in providers {
+            if p.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                handled = true
+                _ = p.loadObject(ofClass: URL.self) { url, _ in
+                    guard let url else { return }
+                    Task { @MainActor in model.sendFile(room: roomId, url: url, replyTo: reply) }
+                }
+            } else if p.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                handled = true
+                p.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
+                    guard let data else { return }
+                    Task { @MainActor in model.sendImage(room: roomId, data: data, replyTo: reply) }
+                }
+            }
+        }
+        if handled { replyTo = nil }
+        return handled
     }
 
     private func importPhotos(_ items: [PhotosPickerItem]) {

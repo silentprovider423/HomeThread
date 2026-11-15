@@ -48,6 +48,14 @@ Everything is stored on the device first (offline-first) and synced with a small
 - **Select several entries** (menu → *Select…*) to copy, forward or delete them at once
 - **Link to an entry** (`homethread://entry/…`): copy it from the menu and paste it into another note – tapping it jumps to that entry
 - **Read aloud** (on the device, language detected from the text)
+- **Photos**: swipe left/right through all photos and videos of a chat, pinch to zoom and drag around, double-tap zooms at the spot, swipe down to close (iPhone); arrow keys on the Mac
+- **Voice notes** at 1×, 1.5× or 2× (tap the speed while playing)
+- Messages with only 1–3 emoji are shown **large**, without a bubble
+- **@mentions** in groups (suggestions while typing, highlighted in the chat)
+- **Reminders** for an entry (local notification on this device; tapping it opens the entry)
+- **Scan documents** to PDF (iPhone), **paste** images and files with ⌘V and **drag** them into a chat (Mac)
+- **Wallpaper** per chat (on this device), **app lock** with Face ID / Touch ID / passcode
+- Optional **Spotlight** search for your entries, **Shortcuts/Siri**: “Add note” and “Open chat”
 - **Forward** an entry as a copy into another chat (attachments are copied too), **details** (kind, author, device, created/edited, sync state, file size, dimensions …; on iPhone also swipe left)
 - Copy, share, **save** photos and videos to Photos (iPhone) or *Save As…* (Mac), delete on all devices, retry failed uploads
 

@@ -147,11 +147,33 @@ EN = {
     "Kein Emoji gefunden": "No emoji found", "Link zum Eintrag kopieren": "Copy Link to Entry", "Reaktion wählen": "Choose Reaction",
     "Smileys": "Smileys", "Symbole": "Symbols", "Tiere & Natur": "Animals & Nature", "Vorlesen": "Read Aloud",
     "Vorlesen beenden": "Stop Reading", "Zuletzt benutzt": "Recently Used", "Eintrag nicht gefunden": "Entry not found",
+    # Sprachnotiz-Tempo, App-Sperre, Erinnerungen, Scannen, Hintergrundbild, Spotlight, Kurzbefehle
+    "${text} in ${room} ablegen": "Add ${text} to ${room}", "%@": "%@", "1,5×": "1.5×", "1×": "1×", "2×": "2×",
+    "Abspieltempo": "Playback Speed", "App-Sperre einschalten": "Turn on app lock",
+    "Beim Verlassen sperrt sich HomeThread; zum Öffnen brauchst du Face ID, Touch ID oder den Gerätecode.":
+        "HomeThread locks when you leave it; Face ID, Touch ID or your device passcode opens it again.",
+    "Bitte zuerst in HomeThread anmelden.": "Please sign in to HomeThread first.", "Chat öffnen": "Open Chat", "Code": "Passcode",
+    "Die Erinnerung kommt als Mitteilung auf diesem Gerät. Antippen öffnet den Eintrag.":
+        "The reminder arrives as a notification on this device. Tapping it opens the entry.",
+    "Dokument scannen": "Scan Document",
+    "Einträge erscheinen in der Spotlight-Suche dieses Geräts. Aus: alles wird wieder entfernt.":
+        "Entries appear in Spotlight search on this device. Off: everything is removed again.",
+    "Erinnern": "Remind Me", "Erinnern …": "Remind Me…", "Erinnerung am %@": "Reminder on %@", "Erinnerung entfernen": "Remove Reminder",
+    "Erinnerung: %@": "Reminder: %@", "Heute Abend (18:00)": "This Evening (6 PM)", "Hintergrundbild": "Wallpaper",
+    "Hintergrundbild entfernen": "Remove Wallpaper", "Hintergrundbild wählen …": "Choose Wallpaper…",
+    "HomeThread entsperren": "Unlock HomeThread", "HomeThread ist gesperrt": "HomeThread is locked", "In 1 Stunde": "In 1 Hour",
+    "In der Systemsuche zeigen": "Show in System Search", "In einer Woche": "In a Week", "In „%@“ abgelegt.": "Added to “%@”.",
+    "Legt einen Text in einem HomeThread-Chat ab.": "Adds a text to a HomeThread chat.", "Mit %@ entsperren": "Unlock with %@",
+    "Mit %@ sperren": "Lock with %@",
+    "Mitteilungen sind ausgeschaltet – erlaube sie in den Einstellungen.": "Notifications are off – allow them in Settings.",
+    "Morgen früh (9:00)": "Tomorrow Morning (9 AM)", "Notiz ablegen": "Add Note", "Nur auf diesem Gerät.": "Only on this device.",
+    "Sperre": "Lock", "Suche": "Search", "Zeitpunkt": "Date", "Zu diesem Zeitpunkt erinnern": "Remind Me at This Time",
 }
 SKIP = {"", "%lld", "%lld/%lld", "0", "99+", "@%@"}
 INFOPLIST = {
     "NSCameraUsageDescription": "So you can take photos and videos directly into a chat.",
     "NSPhotoLibraryUsageDescription": "So you can add photos and videos to a chat.",
+    "NSFaceIDUsageDescription": "So you can lock and unlock HomeThread with Face ID.",
     "NSPhotoLibraryAddUsageDescription": "So you can save photos and videos from a chat to your photo library.",
     "NSMicrophoneUsageDescription": "So you can record voice notes.",
     "NSLocationWhenInUseUsageDescription": "So you can save your current location in a chat.",

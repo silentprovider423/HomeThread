@@ -8,14 +8,18 @@ import UIKit
 /// Kleinere Bilder bleiben in der Mitte.
 struct ZoomableImage: UIViewRepresentable {
     let url: URL
+    /// nach unten wischen (ungezoomt) schließt
+    var onDismiss: () -> Void = {}
 
     func makeUIView(context: Context) -> ZoomScrollView {
         let v = ZoomScrollView()
+        v.onDismiss = onDismiss
         v.load(url)
         return v
     }
 
     func updateUIView(_ v: ZoomScrollView, context: Context) {
+        v.onDismiss = onDismiss
         if v.url != url { v.load(url) }
     }
 }
@@ -23,6 +27,7 @@ struct ZoomableImage: UIViewRepresentable {
 final class ZoomScrollView: UIScrollView, UIScrollViewDelegate {
     private let imageView = UIImageView()
     private(set) var url: URL?
+    var onDismiss: () -> Void = {}
     private var lastSize: CGSize = .zero
 
     override init(frame: CGRect) {
@@ -33,6 +38,7 @@ final class ZoomScrollView: UIScrollView, UIScrollViewDelegate {
         decelerationRate = .fast
         contentInsetAdjustmentBehavior = .never
         bouncesZoom = true
+        alwaysBounceVertical = true
         imageView.contentMode = .scaleAspectFit
         imageView.isAccessibilityElement = true
         imageView.accessibilityIdentifier = "media.image"
@@ -75,6 +81,18 @@ final class ZoomScrollView: UIScrollView, UIScrollViewDelegate {
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
+
+    /// Ungezoomt nach unten ziehen: Bild folgt, wird blasser; weit genug → schließen
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard zoomScale <= minimumZoomScale * 1.01 else { imageView.alpha = 1; return }
+        let pull = -(contentOffset.y + contentInset.top)
+        imageView.alpha = pull > 0 ? max(0.4, 1 - pull / 400) : 1
+    }
+
+    func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        let pull = -(contentOffset.y + contentInset.top)
+        if zoomScale <= minimumZoomScale * 1.01, pull > 110 || (pull > 40 && velocity.y < -1.2) { onDismiss() }
+    }
     func scrollViewDidZoom(_ scrollView: UIScrollView) { center() }
 
     @objc private func doubleTap(_ g: UITapGestureRecognizer) {
@@ -94,6 +112,7 @@ final class ZoomScrollView: UIScrollView, UIScrollViewDelegate {
 /// Mac: Bild zoomen (Zwei-Finger-Geste am Trackpad, Doppelklick) und gezoomt mit Ziehen verschieben.
 struct ZoomableImage: View {
     let url: URL
+    var onDismiss: () -> Void = {}
     @State private var scale: CGFloat = 1
     @State private var base: CGFloat = 1
     @State private var offset: CGSize = .zero

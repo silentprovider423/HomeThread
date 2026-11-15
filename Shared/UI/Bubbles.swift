@@ -20,6 +20,8 @@ struct BubbleActions {
     var onToggleSelect: (Message) -> Void = { _ in }
     /// volle Emoji-Auswahl für eine Reaktion öffnen
     var onPickEmoji: (Message) -> Void = { _ in }
+    /// Erinnerung an diesen Eintrag stellen
+    var onRemind: (Message) -> Void = { _ in }
 }
 
 /// Eine Zeile des Verlaufs: (iPhone) Datums-Pille bei Tageswechsel, ggf. „Neu von anderem Gerät“, dann die Bubble.
@@ -125,6 +127,8 @@ struct MessageBubble: View {
         .background(
             RoundedRectangle(cornerRadius: Theme.bubbleRadius, style: .continuous)
                 .fill(highlighted ? (mine ? Theme.ownBubbleSelected : Theme.otherBubbleSelected) : (mine ? Theme.ownBubble : Theme.otherBubble))
+                // nur Emojis: ohne Sprechblase (beim Markieren sichtbar)
+                .opacity(message.largeEmojiCount != nil && !highlighted ? 0 : 1)
         )
         .overlay(alignment: .topTrailing) {
             if message.pinned {
@@ -169,6 +173,10 @@ struct MessageBubble: View {
     @ViewBuilder
     private var content: some View {
         switch message.kind {
+        case .text where message.largeEmojiCount != nil:
+            Text(message.body.filter { !$0.isWhitespace })
+                .font(.system(size: [0, 56, 46, 38][message.largeEmojiCount ?? 1]))
+                .accessibilityIdentifier("bubble.emoji")
         case .text:
             Text(row.rich?.value ?? AttributedString(message.body))
                 .textSelection(.enabled)
@@ -398,7 +406,20 @@ struct VoiceBubble: View {
             .accessibilityLabel(Text(playing ? "Pause" : "Abspielen"))
             Waveform(values: message.payload.wave ?? Array(repeating: 0.3, count: 30), progress: playing ? player.progress : 0)
                 .frame(width: 150, height: 26)
-            Text(Fmt.duration(message.payload.duration ?? 0)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            if playing {
+                // Tempo umschalten (wie im Messenger): 1× · 1,5× · 2×
+                Button { player.cycleRate() } label: {
+                    Text(player.rate == 1 ? "1×" : player.rate == 1.5 ? "1,5×" : "2×")
+                        .font(.caption.weight(.semibold).monospacedDigit()).foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Capsule().strokeBorder(Theme.accent.opacity(0.6), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Abspieltempo"))
+                .accessibilityIdentifier("voice.rate")
+            } else {
+                Text(Fmt.duration(message.payload.duration ?? 0)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
         }
         .padding(.vertical, 2)
     }

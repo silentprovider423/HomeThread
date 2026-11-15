@@ -52,6 +52,8 @@ enum MessageMenuBuilder {
         }
         main.append(MessageAction(id: "star", title: row.starred ? String(localized: "Nicht mehr merken") : String(localized: "Merken"),
                                   icon: row.starred ? "star.slash" : "star", kind: .run { model.toggleStar(message) }))
+        main.append(MessageAction(id: "remind", title: String(localized: "Erinnern …"), icon: "bell",
+                                  kind: .run { actions.onRemind(message) }))
         main.append(MessageAction(id: "pin", title: message.pinned ? String(localized: "Lösen") : String(localized: "Oben anheften"),
                                   icon: message.pinned ? "pin.slash" : "pin", kind: .run { model.togglePin(message) }))
         if message.kind == .poll && message.payload.closed != true && row.mine {

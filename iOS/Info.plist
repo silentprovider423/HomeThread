@@ -45,6 +45,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Damit du Fotos und Videos direkt in einen Chat aufnehmen kannst.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Damit du HomeThread mit Face ID sperren und entsperren kannst.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Verbindung zu deinem HomeThread-Server im Heimnetz.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

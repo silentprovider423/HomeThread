@@ -172,6 +172,16 @@ nonisolated struct Message: Identifiable, Hashable {
     }
 
     var hasMedia: Bool { kind == .image || kind == .video }
+
+    /// Text nur aus 1–3 Emojis → groß und ohne Sprechblase anzeigen (wie im Messenger). nil = normaler Text.
+    var largeEmojiCount: Int? {
+        guard kind == .text else { return nil }
+        let chars = body.filter { !$0.isWhitespace }
+        guard (1...3).contains(chars.count),
+              chars.allSatisfy({ c in c.unicodeScalars.contains { $0.properties.isEmojiPresentation }
+                  || (c.unicodeScalars.first?.properties.isEmoji == true && c.unicodeScalars.count > 1) }) else { return nil }
+        return chars.count
+    }
 }
 
 nonisolated struct ReactionCount: Hashable, Identifiable {

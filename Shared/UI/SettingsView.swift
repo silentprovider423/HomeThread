@@ -30,6 +30,27 @@ struct SettingsView: View {
                     Text("Jedes Gerät hat eine eigene Anmeldung. Ein verlorenes Gerät kannst du hier abmelden.")
                 }
             }
+            Section {
+                Toggle(isOn: Binding(get: { AppLock.shared.enabled }, set: { AppLock.shared.enable($0) })) {
+                    Label("Mit \(AppLock.shared.methodName) sperren", systemImage: "lock")
+                }
+                .accessibilityIdentifier("settings.appLock")
+            } header: {
+                Text("Sperre")
+            } footer: {
+                Text("Beim Verlassen sperrt sich HomeThread; zum Öffnen brauchst du Face ID, Touch ID oder den Gerätecode.")
+            }
+            Section {
+                Toggle(isOn: Binding(get: { SpotlightIndex.enabled }, set: { on in
+                    SpotlightIndex.enabled = on
+                    Task { if on { if let s = model.store { await SpotlightIndex.refresh(s) } } else { await SpotlightIndex.clear(model.store) } }
+                })) { Label("In der Systemsuche zeigen", systemImage: "magnifyingglass") }
+                .accessibilityIdentifier("settings.spotlight")
+            } header: {
+                Text("Suche")
+            } footer: {
+                Text("Einträge erscheinen in der Spotlight-Suche dieses Geräts. Aus: alles wird wieder entfernt.")
+            }
             Section("Darstellung") {
                 Picker(selection: Bindable(model).appearance) {
                     Text("Automatisch").tag(0)

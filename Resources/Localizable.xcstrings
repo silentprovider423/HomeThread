@@ -4,6 +4,38 @@
     "": {
       "shouldTranslate": false
     },
+    "${text} in ${room} ablegen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${text} in ${room} ablegen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add ${text} to ${room}"
+          }
+        }
+      }
+    },
+    "%@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        }
+      }
+    },
     "%lld": {
       "shouldTranslate": false
     },
@@ -108,6 +140,54 @@
     },
     "0": {
       "shouldTranslate": false
+    },
+    "1,5×": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,5×"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.5×"
+          }
+        }
+      }
+    },
+    "1×": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1×"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1×"
+          }
+        }
+      }
+    },
+    "2×": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2×"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2×"
+          }
+        }
+      }
     },
     "99+": {
       "shouldTranslate": false
@@ -255,6 +335,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Play"
+          }
+        }
+      }
+    },
+    "Abspieltempo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abspieltempo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback Speed"
           }
         }
       }
@@ -707,6 +803,22 @@
         }
       }
     },
+    "App-Sperre einschalten": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-Sperre einschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on app lock"
+          }
+        }
+      }
+    },
     "Archiv": {
       "localizations": {
         "de": {
@@ -1011,6 +1123,22 @@
         }
       }
     },
+    "Beim Verlassen sperrt sich HomeThread; zum Öffnen brauchst du Face ID, Touch ID oder den Gerätecode.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Verlassen sperrt sich HomeThread; zum Öffnen brauchst du Face ID, Touch ID oder den Gerätecode."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HomeThread locks when you leave it; Face ID, Touch ID or your device passcode opens it again."
+          }
+        }
+      }
+    },
     "Benutzername": {
       "localizations": {
         "de": {
@@ -1123,6 +1251,38 @@
         }
       }
     },
+    "Bitte zuerst in HomeThread anmelden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitte zuerst in HomeThread anmelden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please sign in to HomeThread first."
+          }
+        }
+      }
+    },
+    "Chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat"
+          }
+        }
+      }
+    },
     "Chat als Datei sichern": {
       "localizations": {
         "de": {
@@ -1203,6 +1363,22 @@
         }
       }
     },
+    "Chat öffnen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Chat"
+          }
+        }
+      }
+    },
     "Chat-Info": {
       "localizations": {
         "de": {
@@ -1279,6 +1455,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Checklists"
+          }
+        }
+      }
+    },
+    "Code": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passcode"
           }
         }
       }
@@ -1603,6 +1795,22 @@
         }
       }
     },
+    "Die Erinnerung kommt als Mitteilung auf diesem Gerät. Antippen öffnet den Eintrag.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Erinnerung kommt als Mitteilung auf diesem Gerät. Antippen öffnet den Eintrag."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The reminder arrives as a notification on this device. Tapping it opens the entry."
+          }
+        }
+      }
+    },
     "Die Nadel in der Mitte wird festgehalten.": {
       "localizations": {
         "de": {
@@ -1679,6 +1887,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Objects"
+          }
+        }
+      }
+    },
+    "Dokument scannen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokument scannen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan Document"
           }
         }
       }
@@ -1827,6 +2051,22 @@
         }
       }
     },
+    "Einträge erscheinen in der Spotlight-Suche dieses Geräts. Aus: alles wird wieder entfernt.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einträge erscheinen in der Spotlight-Suche dieses Geräts. Aus: alles wird wieder entfernt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entries appear in Spotlight search on this device. Off: everything is removed again."
+          }
+        }
+      }
+    },
     "Emoji": {
       "localizations": {
         "de": {
@@ -1887,6 +2127,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "Draft: "
+          }
+        }
+      }
+    },
+    "Erinnern": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind Me"
+          }
+        }
+      }
+    },
+    "Erinnern …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnern …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind Me…"
+          }
+        }
+      }
+    },
+    "Erinnerung am %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerung am %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder on %@"
+          }
+        }
+      }
+    },
+    "Erinnerung entfernen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerung entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Reminder"
+          }
+        }
+      }
+    },
+    "Erinnerung: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerung: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder: %@"
           }
         }
       }
@@ -2467,6 +2787,70 @@
         }
       }
     },
+    "Heute Abend (18:00)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute Abend (18:00)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Evening (6 PM)"
+          }
+        }
+      }
+    },
+    "Hintergrundbild": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hintergrundbild"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallpaper"
+          }
+        }
+      }
+    },
+    "Hintergrundbild entfernen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hintergrundbild entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Wallpaper"
+          }
+        }
+      }
+    },
+    "Hintergrundbild wählen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hintergrundbild wählen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Wallpaper…"
+          }
+        }
+      }
+    },
     "HomeThread": {
       "localizations": {
         "de": {
@@ -2483,6 +2867,22 @@
         }
       }
     },
+    "HomeThread entsperren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HomeThread entsperren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock HomeThread"
+          }
+        }
+      }
+    },
     "HomeThread ist ein unabhängiges Open-Source-Projekt (GPLv3-Lizenz). Es verschickt nichts an andere – Chats und Gruppen sind Notiz-Räume auf deinem eigenen Server.": {
       "localizations": {
         "de": {
@@ -2495,6 +2895,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "HomeThread is an independent open-source project (GPLv3 license). It never sends anything to other people – chats and groups are note rooms on your own server."
+          }
+        }
+      }
+    },
+    "HomeThread ist gesperrt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HomeThread ist gesperrt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HomeThread is locked"
           }
         }
       }
@@ -2543,6 +2959,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search in Chat"
+          }
+        }
+      }
+    },
+    "In 1 Stunde": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 1 Stunde"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 1 Hour"
           }
         }
       }
@@ -2627,6 +3059,22 @@
         }
       }
     },
+    "In der Systemsuche zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Systemsuche zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show in System Search"
+          }
+        }
+      }
+    },
     "In diesem Chat suchen": {
       "localizations": {
         "de": {
@@ -2639,6 +3087,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search this chat"
+          }
+        }
+      }
+    },
+    "In einer Woche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In einer Woche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In a Week"
+          }
+        }
+      }
+    },
+    "In „%@“ abgelegt.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In „%@“ abgelegt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added to “%@”."
           }
         }
       }
@@ -2995,6 +3475,22 @@
         }
       }
     },
+    "Legt einen Text in einem HomeThread-Chat ab.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legt einen Text in einem HomeThread-Chat ab."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a text to a HomeThread chat."
+          }
+        }
+      }
+    },
     "Link zum Eintrag kopieren": {
       "localizations": {
         "de": {
@@ -3123,6 +3619,38 @@
         }
       }
     },
+    "Mit %@ entsperren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit %@ entsperren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock with %@"
+          }
+        }
+      }
+    },
+    "Mit %@ sperren": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit %@ sperren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock with %@"
+          }
+        }
+      }
+    },
     "Mit ↩ ablegen (sonst ⌘↩)": {
       "localizations": {
         "de": {
@@ -3135,6 +3663,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Return adds entry (otherwise ⌘↩)"
+          }
+        }
+      }
+    },
+    "Mitteilungen sind ausgeschaltet – erlaube sie in den Einstellungen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitteilungen sind ausgeschaltet – erlaube sie in den Einstellungen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off – allow them in Settings."
+          }
+        }
+      }
+    },
+    "Morgen früh (9:00)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Morgen früh (9:00)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tomorrow Morning (9 AM)"
           }
         }
       }
@@ -3439,6 +3999,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nothing Starred Yet"
+          }
+        }
+      }
+    },
+    "Notiz ablegen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notiz ablegen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Note"
+          }
+        }
+      }
+    },
+    "Nur auf diesem Gerät.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur auf diesem Gerät."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only on this device."
           }
         }
       }
@@ -3971,6 +4563,22 @@
         }
       }
     },
+    "Sperre": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sperre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock"
+          }
+        }
+      }
+    },
     "Sprachnotiz": {
       "localizations": {
         "de": {
@@ -4031,6 +4639,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status"
+          }
+        }
+      }
+    },
+    "Suche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
           }
         }
       }
@@ -4511,6 +5135,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Characters"
+          }
+        }
+      }
+    },
+    "Zeitpunkt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitpunkt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "Zu diesem Zeitpunkt erinnern": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu diesem Zeitpunkt erinnern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind Me at This Time"
           }
         }
       }

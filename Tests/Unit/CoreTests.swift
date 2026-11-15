@@ -156,4 +156,44 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(EmojiCatalog.search("xyzxyz").isEmpty)
         XCTAssertEqual(EmojiCatalog.search("  ").count, all.count)
     }
+
+    @MainActor func testLargeEmojiOnlyForShortEmojiTexts() {
+        func m(_ body: String, kind: MessageKind = .text) -> Message {
+            Message(id: "x", roomId: "r", authorId: "u", deviceId: nil, kind: kind, body: body, payload: Payload(), replyTo: nil, attachment: nil,
+                    thumb: nil, createdAt: .now, editedAt: nil, pinned: false, deleted: false, seq: 1, pending: false, failed: nil)
+        }
+        XCTAssertEqual(m("👍").largeEmojiCount, 1)
+        XCTAssertEqual(m("❤️ 😂").largeEmojiCount, 2)
+        XCTAssertEqual(m("👨‍👩‍👧🇩🇪👍🏽").largeEmojiCount, 3, "Zusammengesetzte Emojis zählen als eins")
+        XCTAssertNil(m("👍👍👍👍").largeEmojiCount, "mehr als drei: normal")
+        XCTAssertNil(m("ok 👍").largeEmojiCount)
+        XCTAssertNil(m("123").largeEmojiCount, "Ziffern sind keine Emojis")
+        XCTAssertNil(m("").largeEmojiCount)
+        XCTAssertNil(m("👍", kind: .poll).largeEmojiCount)
+    }
+
+    @MainActor func testMentionIsHighlighted() {
+        let rich = RichText.make("Hallo @Anna, schau mal – mail@example.org bleibt normal").value
+        let bold = rich.runs.filter { $0.inlinePresentationIntent == .stronglyEmphasized }.map { String(rich[$0.range].characters) }
+        XCTAssertEqual(bold, ["@Anna"])
+    }
+
+    @MainActor func testVoiceRateCycles() {
+        let p = VoicePlayer.shared
+        let before = p.rate
+        p.rate = 1
+        p.cycleRate(); XCTAssertEqual(p.rate, 1.5)
+        p.cycleRate(); XCTAssertEqual(p.rate, 2)
+        p.cycleRate(); XCTAssertEqual(p.rate, 1)
+        p.rate = before
+    }
+
+    @MainActor func testWallpaperIsStoredPerRoom() throws {
+        let room = "test-\(newID())"
+        XCTAssertNil(Wallpaper.url(room: room))
+        Wallpaper.set(room: room, data: try LiveServerTests.makeJPEG())
+        XCTAssertNotNil(Wallpaper.url(room: room))
+        Wallpaper.set(room: room, data: nil)
+        XCTAssertNil(Wallpaper.url(room: room))
+    }
 }

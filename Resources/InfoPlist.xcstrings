@@ -17,6 +17,22 @@
         }
       }
     },
+    "NSFaceIDUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damit du HomeThread mit Face ID sperren und entsperren kannst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So you can lock and unlock HomeThread with Face ID."
+          }
+        }
+      }
+    },
     "NSLocalNetworkUsageDescription": {
       "localizations": {
         "de": {

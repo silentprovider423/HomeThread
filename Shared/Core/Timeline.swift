@@ -28,6 +28,14 @@ nonisolated struct RichText: Hashable, Sendable {
                 from = ar.upperBound
             }
         }
+        // Erwähnungen (@Name) hervorheben
+        if plain.contains("@"), let re = try? NSRegularExpression(pattern: "(?<![\\w@])@[\\p{L}\\p{N}_.-]+") {
+            for m in re.matches(in: plain, range: NSRange(plain.startIndex..., in: plain)) {
+                guard let r = Range(m.range, in: plain), let ar = a.range(of: String(plain[r])) else { continue }
+                a[ar].inlinePresentationIntent = .stronglyEmphasized
+                a[ar].foregroundColor = .accentColor
+            }
+        }
         // Links auf andere Einträge (homethread://entry/…)
         for hit in EntryLink.ranges(in: plain) {
             if let ar = a.range(of: String(plain[hit.range])), a[ar].link == nil { a[ar].link = hit.url }

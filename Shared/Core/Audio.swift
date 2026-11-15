@@ -86,6 +86,10 @@ final class VoicePlayer: NSObject, AVAudioPlayerDelegate {
     static let shared = VoicePlayer()
     var playingID: String?
     var progress: Double = 0
+    /// Abspieltempo 1× / 1,5× / 2× (Tonhöhe bleibt), wird gemerkt
+    var rate: Float = UserDefaults.standard.object(forKey: "voiceRate") as? Float ?? 1 {
+        didSet { UserDefaults.standard.set(rate, forKey: "voiceRate"); player?.rate = rate }
+    }
     private var player: AVAudioPlayer?
     private var timer: Timer?
 
@@ -98,6 +102,8 @@ final class VoicePlayer: NSObject, AVAudioPlayerDelegate {
         #endif
         guard let p = try? AVAudioPlayer(contentsOf: url) else { return }
         p.delegate = self
+        p.enableRate = true
+        p.rate = rate
         p.play()
         player = p
         playingID = id
@@ -108,6 +114,9 @@ final class VoicePlayer: NSObject, AVAudioPlayerDelegate {
             }
         }
     }
+
+    /// 1× → 1,5× → 2× → 1×
+    func cycleRate() { rate = rate < 1.25 ? 1.5 : rate < 1.75 ? 2 : 1 }
 
     func stop() {
         timer?.invalidate()

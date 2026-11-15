@@ -92,6 +92,9 @@ struct RoomInfoView: View {
                     }
                 }
                 Section {
+                    WallpaperRow(roomId: roomId) { model.revision += 1 }
+                } header: { Text("Hintergrundbild") } footer: { Text("Nur auf diesem Gerät.") }
+                Section {
                     Toggle(isOn: Binding(get: { room.pinned }, set: { model.setRoomState(roomId, pinned: $0) })) {
                         Label("In der Liste oben anheften", systemImage: "pin")
                     }

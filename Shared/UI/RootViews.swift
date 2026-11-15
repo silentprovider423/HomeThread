@@ -1,3 +1,5 @@
+import CoreSpotlight
+import UserNotifications
 import SwiftUI
 
 /// Ziel beim Öffnen eines Chats (optional mit Sprung zu einem Eintrag).
@@ -99,6 +101,7 @@ struct AppRoot: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var phase
     @State private var shownNotFound = 0
+    @State private var lock = AppLock.shared
 
     var body: some View {
         Group {
@@ -117,10 +120,24 @@ struct AppRoot: View {
         // Links auf Einträge (homethread://entry/…): im Verlauf angetippt oder von außen geöffnet
         .environment(\.openURL, OpenURLAction { url in model.open(link: url) ? .handled : .systemAction })
         .onOpenURL { model.open(link: $0) }
+        // Treffer aus der Systemsuche (Spotlight)
+        .onContinueUserActivity(CSSearchableItemActionType) { act in
+            if let s = act.userInfo?[CSSearchableItemActivityIdentifier] as? String, let u = URL(string: s) { model.open(link: u) }
+        }
+        // App-Sperre: deckt alles ab, bis Face ID/Touch ID/Code bestätigt ist
+        .overlay { if lock.locked && model.session != nil { LockScreen(lock: lock) } }
+        .onAppear {
+            UNUserNotificationCenter.current().delegate = ReminderDelegate.shared
+            ReminderDelegate.shared.open = { [model] in model.open(link: $0) }
+        }
         .alert("Eintrag nicht gefunden", isPresented: Binding(get: { model.linkNotFound > shownNotFound }, set: { if !$0 { shownNotFound = model.linkNotFound } })) {
             Button("OK") { shownNotFound = model.linkNotFound }
         } message: {
             Text("Der Link zeigt auf einen Eintrag, den es auf diesem Gerät nicht (mehr) gibt.")
+        }
+        .onChange(of: phase) { _, p in
+            if p == .background { lock.lockIfEnabled() }
+            if p == .active && lock.locked { lock.unlock() }
         }
         .onChange(of: phase, initial: true) { _, p in
             if p == .active && model.session != nil {
