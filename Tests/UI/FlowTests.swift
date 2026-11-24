@@ -64,6 +64,14 @@ final class FlowTests: XCTestCase {
         f.typeText(text)
     }
 
+    /// Bildschirmfoto im Testergebnis behalten (zum Nachsehen)
+    private func shot(_ name: String) {
+        let a = XCTAttachment(screenshot: app.screenshot())
+        a.name = name
+        a.lifetime = .keepAlways
+        add(a)
+    }
+
     private func attach(_ title: String) {
         app.buttons["input.attach"].tap()
         let b = app.buttons[title].firstMatch
@@ -226,6 +234,86 @@ final class FlowTests: XCTestCase {
         name.typeText(" 2\n")
         XCTAssertTrue(app.staticTexts["\(group) 2"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["info.addPerson"].exists)
+    }
+
+    func testPhotoStripPreviewCaptionAndLinkPreview() throws {
+        newRoom(group: false, name: "UI Fotos \(run)")
+        // Streifen der letzten Fotos im „+“-Menü: zwei antippen → „2 Fotos weiter“ → Vorschau
+        app.buttons["input.attach"].tap()
+        let items = app.buttons.matching(identifier: "attach.strip.item")
+        let allow = app.buttons["attach.strip.allow"]
+        if allow.waitForExistence(timeout: 5) {
+            // Systemabfrage (nur im Test-Simulator): vollen Zugriff erlauben
+            allow.tap()
+            let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+            let alert = sb.alerts.firstMatch
+            if alert.waitForExistence(timeout: 8) {
+                print("Fotos-Abfrage: \(alert.buttons.allElementsBoundByIndex.map { $0.label })")
+                let full = alert.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Vollen' OR label CONTAINS[c] 'Full'")).firstMatch
+                XCTAssertTrue(full.exists); full.tap()
+            }
+        }
+        if !items.firstMatch.waitForExistence(timeout: 10) { print(app.debugDescription) }
+        XCTAssertTrue(items.firstMatch.exists, "keine Fotos im Streifen")
+        items.element(boundBy: 0).tap()
+        items.element(boundBy: 1).tap()
+        let next = app.buttons["attach.strip.next"]
+        XCTAssertTrue(next.waitForExistence(timeout: 3))
+        shot("streifen")
+        next.tap()
+        // Vorschau: Bildunterschrift fürs erste Foto, dann ablegen
+        let caption = app.textFields["compose.caption"].exists ? app.textFields["compose.caption"] : app.textViews["compose.caption"]
+        XCTAssertTrue(app.buttons["compose.send"].waitForExistence(timeout: 15))
+        let word = "Strand\(run)"
+        let field = app.textFields["compose.caption"].waitForExistence(timeout: 3) ? app.textFields["compose.caption"] : caption
+        field.tap()
+        field.typeText(word)
+        shot("vorschau")
+        app.buttons["compose.send"].tap()
+        XCTAssertTrue(app.staticTexts[word].waitForExistence(timeout: 10), "Bildunterschrift fehlt im Chat")
+        XCTAssertGreaterThanOrEqual(app.images.matching(NSPredicate(format: "identifier BEGINSWITH 'bubble.image'")).count, 0)
+        // Link-Vorschau unter einem Eintrag mit Link
+        send("Siehe https://example.com")
+        XCTAssertTrue(app.buttons["linkPreview"].waitForExistence(timeout: 25), "keine Link-Vorschau")
+        shot("chat")
+    }
+
+    /// Teilen-Erweiterung: in der Fotos-App ein Bild an HomeThread teilen, danach liegt es im gewählten Chat.
+    func testShareExtensionFromPhotos() throws {
+        let name = "UI Teilen \(run)"
+        newRoom(group: false, name: name)
+        let photos = XCUIApplication(bundleIdentifier: "com.apple.mobileslideshow")
+        photos.launch()   // HomeThread geht in den Hintergrund und legt die Chat-Liste bereit
+        // Willkommen-Hinweis beim ersten Start der Fotos-App
+        let cont = photos.buttons.matching(NSPredicate(format: "label == 'Fortfahren' OR label == 'Continue'")).firstMatch
+        if cont.waitForExistence(timeout: 8) {
+            for _ in 0..<3 where cont.exists { cont.tap(); sleep(2) }
+        }
+        // neuestes Foto öffnen (Raster: unten rechts liegt das neueste); steht die App noch in einem Foto, das nehmen
+        let share = photos.buttons.matching(NSPredicate(format: "label == 'Teilen' OR label == 'Share' OR identifier == 'ShareButton'")).firstMatch
+        if !share.waitForExistence(timeout: 3) {
+            let tiles = photos.images.matching(identifier: "PXGGridLayout-Info")
+            if !tiles.firstMatch.waitForExistence(timeout: 10) { print(photos.debugDescription) }
+            tiles.element(boundBy: tiles.count - 1).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            if !share.waitForExistence(timeout: 8) { print(photos.debugDescription) }
+        }
+        share.tap()
+        let target = photos.descendants(matching: .any).matching(NSPredicate(format: "label == 'HomeThread'")).firstMatch
+        if !target.waitForExistence(timeout: 10) { print(photos.debugDescription) }
+        XCTAssertTrue(target.exists, "HomeThread fehlt im Teilen-Menü")
+        target.tap()
+        let room = photos.buttons.matching(NSPredicate(format: "identifier == 'share.room' AND label CONTAINS %@", name)).firstMatch
+        if !room.waitForExistence(timeout: 10) { print(photos.debugDescription) }
+        XCTAssertTrue(room.exists, "Chat fehlt in der Erweiterung")
+        room.tap()
+        let comment = photos.textFields["share.comment"].exists ? photos.textFields["share.comment"] : photos.textViews["share.comment"]
+        if comment.exists { comment.tap(); comment.typeText("Geteilt \(run)") }
+        let a = XCTAttachment(screenshot: photos.screenshot()); a.name = "teilen"; a.lifetime = .keepAlways; add(a)
+        photos.buttons["share.send"].tap()
+        // zurück in HomeThread: Paket wird übernommen, Chat geöffnet
+        app.activate()
+        XCTAssertTrue(app.staticTexts["Geteilt \(run)"].waitForExistence(timeout: 15), "geteiltes Foto nicht im Chat")
+        shot("geteilt")
     }
 
     func testVoiceNote() throws {

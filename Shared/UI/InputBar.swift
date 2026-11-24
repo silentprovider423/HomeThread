@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Eingabeleiste: „+“ (Anhänge), Textfeld, Kamera/Mikro bzw. Ablegen-Pfeil; darüber Antwort- oder Bearbeiten-Leiste.
 struct InputBar: View {
-    enum Attach { case camera, scan, photos, location, poll, checklist, file }
+    enum Attach { case camera, scan, photos, location, poll, checklist, file, picked([PendingMedia]) }
 
     @Environment(AppModel.self) private var model
     let roomId: String
@@ -61,7 +61,7 @@ struct InputBar: View {
             if let a = pendingAttach { pendingAttach = nil; onAttach(a) }
         }) {
             AttachSheet { a in pendingAttach = a; showAttach = false }
-                .presentationDetents([.height(CGFloat(Self.actions.count) * 52 + 130)])
+                .presentationDetents([.height(CGFloat(Self.actions.count) * 52 + 226)])
                 .presentationDragIndicator(.visible)
         }
         #endif
@@ -309,9 +309,12 @@ struct InputBar: View {
 struct AttachSheet: View {
     var pick: (InputBar.Attach) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var photos = RecentPhotos()
 
     var body: some View {
         VStack(spacing: 10) {
+            RecentPhotosStrip(photos: photos) { pick(.camera) }
+                .padding(.bottom, 2)
             VStack(spacing: 0) {
                 ForEach(Array(InputBar.actions.enumerated()), id: \.offset) { i, a in
                     if i > 0 { Theme.hairline.frame(height: 0.5).padding(.leading, 54) }
@@ -327,12 +330,29 @@ struct AttachSheet: View {
                 }
             }
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.chatBarField))
-            Button { dismiss() } label: {
-                Text("Abbrechen").font(.body.weight(.semibold)).foregroundStyle(Theme.accent)
+            if photos.picked.isEmpty {
+                Button { dismiss() } label: {
+                    Text("Abbrechen").font(.body.weight(.semibold)).foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity).frame(height: 52)
+                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.chatBarField))
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    Task { let list = await photos.load(); if !list.isEmpty { pick(.picked(list)) } }
+                } label: {
+                    HStack(spacing: 8) {
+                        if photos.loading { ProgressView().tint(Theme.onAccent) }
+                        Text(photos.picked.count == 1 ? String(localized: "1 Foto weiter") : String(localized: "\(photos.picked.count) Fotos weiter"))
+                    }
+                    .font(.body.weight(.semibold)).foregroundStyle(Theme.onAccent)
                     .frame(maxWidth: .infinity).frame(height: 52)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.chatBarField))
+                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.accent))
+                }
+                .buttonStyle(.plain)
+                .disabled(photos.loading)
+                .accessibilityIdentifier("attach.strip.next")
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12).padding(.top, 22)
         .frame(maxHeight: .infinity, alignment: .top)

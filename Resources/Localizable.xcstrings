@@ -39,6 +39,22 @@
     "%lld": {
       "shouldTranslate": false
     },
+    "%lld Dateien": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Dateien"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Files"
+          }
+        }
+      }
+    },
     "%lld Einträge auf allen Geräten löschen?": {
       "localizations": {
         "de": {
@@ -71,6 +87,38 @@
         }
       }
     },
+    "%lld Fotos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Fotos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Photos"
+          }
+        }
+      }
+    },
+    "%lld Fotos weiter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Fotos weiter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue with %lld Photos"
+          }
+        }
+      }
+    },
     "%lld Mitglieder": {
       "localizations": {
         "de": {
@@ -83,6 +131,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld members"
+          }
+        }
+      }
+    },
+    "%lld Videos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Videos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Videos"
           }
         }
       }
@@ -119,6 +183,22 @@
         }
       }
     },
+    "%lld von %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld von %lld"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld of %lld"
+          }
+        }
+      }
+    },
     "%lld Änderungen warten": {
       "localizations": {
         "de": {
@@ -140,6 +220,70 @@
     },
     "0": {
       "shouldTranslate": false
+    },
+    "1 Datei": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Datei"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 File"
+          }
+        }
+      }
+    },
+    "1 Foto": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Foto"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Photo"
+          }
+        }
+      }
+    },
+    "1 Foto weiter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Foto weiter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue with 1 Photo"
+          }
+        }
+      }
+    },
+    "1 Video": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Video"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Video"
+          }
+        }
+      }
     },
     "1,5×": {
       "localizations": {
@@ -271,6 +415,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add"
+          }
+        }
+      }
+    },
+    "Ablegen (%lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ablegen (%lld)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add (%lld)"
           }
         }
       }
@@ -1251,6 +1411,54 @@
         }
       }
     },
+    "Bildunterschrift hinzufügen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildunterschrift hinzufügen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a caption…"
+          }
+        }
+      }
+    },
+    "Bitte HomeThread einmal öffnen, damit die Chats hier erscheinen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitte HomeThread einmal öffnen, damit die Chats hier erscheinen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open HomeThread once so your chats appear here."
+          }
+        }
+      }
+    },
+    "Bitte HomeThread einmal öffnen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitte HomeThread einmal öffnen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please open HomeThread once."
+          }
+        }
+      }
+    },
     "Bitte zuerst in HomeThread anmelden.": {
       "localizations": {
         "de": {
@@ -1347,6 +1555,22 @@
         }
       }
     },
+    "Chat wählen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat wählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Chat"
+          }
+        }
+      }
+    },
     "Chat · nur für dich": {
       "localizations": {
         "de": {
@@ -1407,6 +1631,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chats"
+          }
+        }
+      }
+    },
+    "Chats durchsuchen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats durchsuchen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Chats"
           }
         }
       }
@@ -3283,6 +3523,22 @@
         }
       }
     },
+    "Kein Zugriff auf Fotos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Zugriff auf Fotos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No access to photos"
+          }
+        }
+      }
+    },
     "Kein Zugriff auf Fotos – erlaube ihn in den Einstellungen.": {
       "localizations": {
         "de": {
@@ -3395,6 +3651,38 @@
         }
       }
     },
+    "Kommentar hinzufügen …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommentar hinzufügen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a comment…"
+          }
+        }
+      }
+    },
+    "Konnte nicht gespeichert werden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konnte nicht gespeichert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't be saved."
+          }
+        }
+      }
+    },
     "Konto": {
       "localizations": {
         "de": {
@@ -3491,6 +3779,22 @@
         }
       }
     },
+    "Letzte Fotos zeigen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Fotos zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Recent Photos"
+          }
+        }
+      }
+    },
     "Link zum Eintrag kopieren": {
       "localizations": {
         "de": {
@@ -3503,6 +3807,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copy Link to Entry"
+          }
+        }
+      }
+    },
+    "Link-Vorschau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link-Vorschau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link Previews"
           }
         }
       }
@@ -3951,6 +4271,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "No longer available"
+          }
+        }
+      }
+    },
+    "Nichts zum Ablegen gefunden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts zum Ablegen gefunden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to add found."
           }
         }
       }
@@ -4723,6 +5059,22 @@
         }
       }
     },
+    "Teilen ist in dieser Installation nicht verfügbar (App-Gruppe fehlt).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teilen ist in dieser Installation nicht verfügbar (App-Gruppe fehlt)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sharing isn't available in this installation (app group missing)."
+          }
+        }
+      }
+    },
     "Teilen …": {
       "localizations": {
         "de": {
@@ -4947,6 +5299,22 @@
         }
       }
     },
+    "Vorschau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview"
+          }
+        }
+      }
+    },
     "Wartende Änderungen": {
       "localizations": {
         "de": {
@@ -5071,6 +5439,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Forward…"
+          }
+        }
+      }
+    },
+    "Wird beim nächsten Öffnen von HomeThread im Chat abgelegt.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird beim nächsten Öffnen von HomeThread im Chat abgelegt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will be added to the chat the next time you open HomeThread."
           }
         }
       }

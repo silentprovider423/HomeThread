@@ -13,7 +13,15 @@ xcodebuild -project HomeThread.xcodeproj -scheme HomeThread -configuration Relea
 APP="build-ipa/Build/Products/Release-iphoneos/HomeThread.app"
 [ -d "$APP" ] || { echo "FEHLER: $APP nicht gefunden"; exit 1; }
 rm -rf Payload; mkdir Payload; cp -R "$APP" Payload/
-codesign -f -s - Payload/HomeThread.app
+# Ad-hoc MIT Berechtigungen (App-Gruppe): AltStore/SideStore lesen daraus, welche Gruppe sie anlegen müssen –
+# sonst hätte die Teilen-Erweiterung keinen gemeinsamen Ordner mit der App.
+P=Payload/HomeThread.app
+codesign -f -s - --entitlements ShareExt/HomeThreadShare.entitlements "$P/PlugIns/HomeThreadShare.appex"
+codesign -f -s - --entitlements iOS/HomeThread.entitlements "$P"
+for b in "$P" "$P/PlugIns/HomeThreadShare.appex"; do
+  codesign -d --entitlements :- "$b" 2>/dev/null | grep -q "group.org.homeroll.thread" \
+    || { echo "FEHLER: App-Gruppe fehlt in $b"; rm -rf Payload; exit 1; }
+done
 # Keine Spuren des Bau-Rechners veröffentlichen (Baupfade enthalten sonst den Mac-Benutzernamen)
 if grep -raqiF -e "$USER" -e "$HOME" Payload; then
   echo "FEHLER: Benutzername oder Home-Pfad in der App – aus einem neutralen Ordner bauen (z. B. git clone nach /tmp/build)."

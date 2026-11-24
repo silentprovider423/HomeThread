@@ -143,8 +143,14 @@ struct AppRoot: View {
             if p == .active && model.session != nil {
                 model.syncSoon()
                 model.startTimer()
+                // aus anderen Apps Geteiltes übernehmen und den Chat öffnen
+                Task {
+                    if let room = await model.importShared() { model.openRequest = ChatRoute(room: room) }
+                    model.writeShareRooms()
+                }
             } else if p != .active {
                 model.stopTimer()
+                model.writeShareRooms()
             }
         }
         .onChange(of: model.session?.token) { _, t in

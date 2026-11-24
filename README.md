@@ -37,6 +37,10 @@ Everything is stored on the device first (offline-first) and synced with a small
 - Text with links and **bold**/_italic_, edit your own text – **earlier versions are kept** (last 20, shown in the entry's details)
 - **Voice notes** with waveform (record, discard, add; playback with progress)
 - **Photos and videos** (camera on iPhone, photo library, up to 10 at once) – photos are resized to 2560 px and stored **without EXIF/location data**
+- **Preview before adding**: swipe through the chosen photos/videos, add a **caption** to each, remove single ones
+- **Recent photos** right in the attach sheet (iPhone): tap a few, *Continue*, done
+- **Link previews**: a card with title, picture and site under entries with a web link (fetched on the device, cached; can be turned off in Settings)
+- **Share from other apps** (iPhone/iPad): *HomeThread* in the share sheet of Safari, Maps, Photos, Files … – choose a chat, add a comment; it is added the next time you open HomeThread
 - **Files** of any type (Quick Look preview)
 - **Location** (current location or a pin on the map, with a name; static map preview, opens in Maps)
 - **Polls** (single or multiple choice, live results or hidden until closed, end poll, winner marked)
@@ -92,7 +96,7 @@ Everything is stored on the device first (offline-first) and synced with a small
 ## Install without a Mac
 
 1. Set up your server ([docs/SETUP.md](docs/SETUP.md)) and create your account with the admin command (you get a password and a QR code for your authenticator app).
-2. Download `HomeThread-<version>.ipa` from the latest release and install it with [SideStore](https://sidestore.io) or [AltStore](https://altstore.io). A free Apple ID is enough, the app then has to be refreshed every 7 days.
+2. Download `HomeThread-<version>.ipa` from the latest release and install it with [SideStore](https://sidestore.io) or [AltStore](https://altstore.io). A free Apple ID is enough, the app then has to be refreshed every 7 days. The share extension uses one extra app ID of the free account's weekly limit.
 3. Open the app, enter your server address, username, password and the current code from your authenticator app.
 
 ## Build & install
@@ -141,6 +145,7 @@ Debug builds read `THREAD_SERVER` + `THREAD_TOKEN` (or `THREAD_USER`/`THREAD_PAS
 ```
 Shared/Core/  SQLite store, API client, sync engine (AppModel), media, audio, keychain/TOTP
 Shared/UI/    chat list, chat view, bubbles, input bar, composers, room info, search, settings, iPhone/Mac roots
+ShareExt/     share extension (iPhone/iPad): hands shared items to the app through the app group
 iOS/ macOS/   app entry points, Info.plist, asset catalogs
 server/       sync server (Python/FastAPI + SQLite) and Caddy, Docker Compose, server tests
 Tests/        unit tests, live tests against a test account, UI tests

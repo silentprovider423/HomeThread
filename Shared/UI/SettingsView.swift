@@ -57,6 +57,8 @@ struct SettingsView: View {
                     Text("Hell").tag(1)
                     Text("Dunkel").tag(2)
                 } label: { Label("Darstellung", systemImage: "circle.lefthalf.filled") }
+                Toggle(isOn: Bindable(model).linkPreviews) { Label("Link-Vorschau", systemImage: "link") }
+                    .accessibilityIdentifier("settings.linkPreviews")
                 #if os(macOS)
                 Toggle("Mit ↩ ablegen (sonst ⌘↩)", isOn: Bindable(model).returnSends)
                 #else

@@ -192,6 +192,9 @@ struct MessageBubble: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("bubble.text.\(message.body.prefix(40))")
             #endif
+            if model.linkPreviews, let url = LinkPreviewStore.firstWebLink(row.rich?.value ?? AttributedString(message.body)) {
+                LinkPreviewCard(url: url)
+            }
         case .image, .video:
             MediaThumb(row: row).onTapGesture { actions.onOpenMedia(message) }
             if !message.body.isEmpty { Text(message.body).padding(.horizontal, 8) }

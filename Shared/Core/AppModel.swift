@@ -22,6 +22,10 @@ final class AppModel {
     var appearance: Int = UserDefaults.standard.integer(forKey: "appearance") {
         didSet { UserDefaults.standard.set(appearance, forKey: "appearance") }
     }
+    /// Vorschau (Titel, Bild) unter Links – holt die Angaben von der verlinkten Seite
+    var linkPreviews: Bool = UserDefaults.standard.object(forKey: "linkPreviews") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(linkPreviews, forKey: "linkPreviews") }
+    }
     /// Mac: Return legt ab (sonst ⌘↩)
     var returnSends: Bool = UserDefaults.standard.object(forKey: "returnSends") as? Bool ?? true {
         didSet { UserDefaults.standard.set(returnSends, forKey: "returnSends") }
@@ -158,6 +162,9 @@ final class AppModel {
         syncTask?.cancel()
         if revoke { try? await api?.logout() }
         await SpotlightIndex.clear(store)
+        #if os(iOS)
+        ShareInbox.clear()
+        #endif
         if let s = session, !s.ephemeral { Session.clear() }
         if let root = store?.root { try? FileManager.default.removeItem(at: root) }
         store = nil
@@ -621,7 +628,7 @@ final class AppModel {
         addMessage(room: room, kind: .image, body: caption, payload: pl, replyTo: replyTo, attachment: full, thumb: thumb)
     }
 
-    func sendVideo(room: String, url: URL, replyTo: String? = nil) async {
+    func sendVideo(room: String, url: URL, caption: String = "", replyTo: String? = nil) async {
         let info = await Media.videoInfo(url)
         let name = url.lastPathComponent
         guard let att = saveFile(url, name: name, mime: Media.mime(for: url), move: false) else { return }
@@ -629,7 +636,68 @@ final class AppModel {
         var pl = Payload()
         pl.w = info.w; pl.h = info.h; pl.duration = info.duration; pl.filename = name; pl.mime = Media.mime(for: url)
         pl.size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? nil
-        addMessage(room: room, kind: .video, payload: pl, replyTo: replyTo, attachment: att, thumb: thumb)
+        addMessage(room: room, kind: .video, body: caption, payload: pl, replyTo: replyTo, attachment: att, thumb: thumb)
+    }
+
+    /// Fotos/Videos aus der Vorschau ablegen (in der gewählten Reihenfolge, je mit Bildunterschrift)
+    func sendMedia(room: String, _ items: [PendingMedia], replyTo: String? = nil) async {
+        for (i, m) in items.enumerated() {
+            let reply = i == 0 ? replyTo : nil
+            let cap = m.caption.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch m.kind {
+            case .image(let d): sendImage(room: room, data: d, caption: cap, replyTo: reply)
+            case .video(let u): await sendVideo(room: room, url: u, caption: cap, replyTo: reply)
+            }
+        }
+    }
+
+    // MARK: Teilen aus anderen Apps (iPhone-Erweiterung → App-Gruppe)
+
+    /// Chat-Liste für die Teilen-Erweiterung bereitlegen (nur Titel/Kennung, neueste zuerst)
+    func writeShareRooms() {
+        #if os(iOS)
+        guard store != nil else { return }
+        let list = summaries(archived: false) + summaries(archived: true)
+        ShareInbox.saveRooms(list.sorted { ($0.room.pinned ? 1 : 0, $0.sortDate) > ($1.room.pinned ? 1 : 0, $1.sortDate) }
+            .prefix(300).map { ShareInbox.RoomEntry(id: $0.room.id, title: $0.room.title, group: $0.room.kind == .group, members: $0.room.memberCount) })
+        if ShareInbox.appearance != appearance { ShareInbox.appearance = appearance }
+        #endif
+    }
+
+    /// In der Erweiterung Abgelegtes in die Chats übernehmen; gibt den Chat des letzten Pakets zurück
+    @discardableResult
+    func importShared() async -> String? {
+        #if os(iOS)
+        guard let store else { return nil }
+        var last: String?
+        for (drop, dir) in ShareInbox.pending() {
+            guard store.room(drop.room) != nil else { ShareInbox.remove(dir); continue }
+            var text = drop.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            // kurzer Kommentar zu einem Foto/Video → als Bildunterschrift, sonst eigener Eintrag davor
+            if let first = drop.items.first, first.kind != .file, text.count <= 1000 {} else if !text.isEmpty {
+                sendText(room: drop.room, text, replyTo: nil); text = ""
+            }
+            for (i, item) in drop.items.enumerated() {
+                let f = dir.appendingPathComponent(item.file)
+                let cap = i == 0 ? text : ""
+                switch item.kind {
+                case .image:
+                    if let d = try? Data(contentsOf: f) { sendImage(room: drop.room, data: d, caption: cap) }
+                case .video:
+                    await sendVideo(room: drop.room, url: f, caption: cap)
+                case .file:
+                    sendFile(room: drop.room, url: f)
+                }
+            }
+            if drop.items.isEmpty && !text.isEmpty { sendText(room: drop.room, text, replyTo: nil) }
+            ShareInbox.remove(dir)
+            last = drop.room
+        }
+        if last != nil { syncSoon() }
+        return last
+        #else
+        return nil
+        #endif
     }
 
     func sendFile(room: String, url: URL, replyTo: String? = nil) {

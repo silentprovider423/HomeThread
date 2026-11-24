@@ -38,7 +38,7 @@ struct ChatView: View {
     @State private var confirmDeleteSelection = false
 
     enum Sheet: Identifiable {
-        case poll, checklist, location, camera, scan, media(Message), forward([Message]), details(Message), emoji(Message), remind(Message)
+        case poll, checklist, location, camera, scan, compose([PendingMedia]), media(Message), forward([Message]), details(Message), emoji(Message), remind(Message)
         var id: String {
             switch self {
             case .poll: return "poll"
@@ -46,6 +46,7 @@ struct ChatView: View {
             case .location: return "location"
             case .camera: return "camera"
             case .scan: return "scan"
+            case .compose(let l): return "compose.\(l.first?.id.uuidString ?? "")"
             case .remind(let m): return "remind.\(m.id)"
             case .media(let m): return "media.\(m.id)"
             case .forward(let m): return "forward.\(m.first?.id ?? "")"
@@ -105,6 +106,7 @@ struct ChatView: View {
                     case .poll: sheet = .poll
                     case .checklist: sheet = .checklist
                     case .file: showFiles = true
+                    case .picked(let list): compose(list)
                     }
                 }
                 }
@@ -412,12 +414,18 @@ struct ChatView: View {
             LocationPicker { lat, lon, name in model.sendLocation(room: roomId, lat: lat, lon: lon, name: name) }
         case .camera:
             #if os(iOS)
-            CameraPicker(onImage: { model.sendImage(room: roomId, data: $0, replyTo: replyTo?.id); replyTo = nil },
-                         onVideo: { u in Task { await model.sendVideo(room: roomId, url: u, replyTo: replyTo?.id); replyTo = nil } })
+            CameraPicker(onImage: { compose([PendingMedia(kind: .image($0))]) },
+                         onVideo: { compose([PendingMedia(kind: .video($0))]) })
                 .ignoresSafeArea()
             #else
             EmptyView()
             #endif
+        case .compose(let list):
+            MediaComposeSheet(items: list) { items in
+                let reply = replyTo?.id
+                replyTo = nil
+                Task { await model.sendMedia(room: roomId, items, replyTo: reply) }
+            }
         case .media(let m):
             MediaViewer(message: m)
         case .forward(let list):
@@ -465,18 +473,27 @@ struct ChatView: View {
 
     private func importPhotos(_ items: [PhotosPickerItem]) {
         guard !items.isEmpty else { return }
-        let reply = replyTo?.id
-        replyTo = nil
         Task {
+            var list: [PendingMedia] = []
             for item in items {
                 if item.supportedContentTypes.contains(where: { $0.conforms(to: .movie) }),
                    let movie = try? await item.loadTransferable(type: MovieFile.self) {
-                    await model.sendVideo(room: roomId, url: movie.url, replyTo: reply)
+                    list.append(PendingMedia(kind: .video(movie.url)))
                 } else if let data = try? await item.loadTransferable(type: Data.self) {
-                    model.sendImage(room: roomId, data: data, replyTo: reply)
+                    list.append(PendingMedia(kind: .image(data)))
                 }
             }
             photoItems = []
+            compose(list)
+        }
+    }
+
+    /// Vorschau mit Bildunterschrift öffnen (nach dem Schließen eines anderen Blatts kurz warten)
+    private func compose(_ list: [PendingMedia]) {
+        guard !list.isEmpty else { return }
+        Task { @MainActor in
+            if sheet != nil { sheet = nil; try? await Task.sleep(for: .milliseconds(450)) }
+            sheet = .compose(list)
         }
     }
 }

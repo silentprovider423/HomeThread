@@ -5,6 +5,16 @@ Aufruf nach einem iOS- und einem Mac-Build:  python3 tools/strings.py   (meldet 
 import glob, json, os, sys
 
 EN = {
+    "%lld Dateien": "%lld Files", "%lld Fotos": "%lld Photos", "%lld Videos": "%lld Videos", "1 Datei": "1 File", "1 Foto": "1 Photo",
+    "1 Video": "1 Video", "Bitte HomeThread einmal öffnen, damit die Chats hier erscheinen.": "Open HomeThread once so your chats appear here.",
+    "Bitte HomeThread einmal öffnen.": "Please open HomeThread once.", "Chat wählen": "Choose a Chat", "Chats durchsuchen": "Search Chats",
+    "Kommentar hinzufügen …": "Add a comment…", "Konnte nicht gespeichert werden.": "Couldn't be saved.",
+    "Nichts zum Ablegen gefunden.": "Nothing to add found.",
+    "Teilen ist in dieser Installation nicht verfügbar (App-Gruppe fehlt).": "Sharing isn't available in this installation (app group missing).",
+    "Wird beim nächsten Öffnen von HomeThread im Chat abgelegt.": "Will be added to the chat the next time you open HomeThread.",
+    "%lld Fotos weiter": "Continue with %lld Photos", "%lld von %lld": "%lld of %lld", "1 Foto weiter": "Continue with 1 Photo",
+    "Ablegen (%lld)": "Add (%lld)", "Bildunterschrift hinzufügen …": "Add a caption…", "Kein Zugriff auf Fotos": "No access to photos",
+    "Letzte Fotos zeigen": "Show Recent Photos", "Link-Vorschau": "Link Previews", "Vorschau": "Preview",
     "%lld Mitglieder": "%lld members", "Archivierte Chats": "Archived Chats", "Bearbeitet %@": "Edited %@", "Details": "Details",
     "Emoji": "Emoji", "Fehler": "Error", "Gestern, %@": "Yesterday, %@", "Ich": "Me",
     "Lege mit ⌘N einen Chat oder mit ⇧⌘N eine Gruppe an.": "Create a chat with ⌘N or a group with ⇧⌘N.",

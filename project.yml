@@ -11,8 +11,8 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: minimal
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
-    MARKETING_VERSION: "1.4.1"
-    CURRENT_PROJECT_VERSION: "11"
+    MARKETING_VERSION: "1.5.0"
+    CURRENT_PROJECT_VERSION: "12"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     SWIFT_EMIT_LOC_STRINGS: YES
@@ -27,6 +27,12 @@ targets:
         excludes: ["Info.plist"]
       - path: Resources
         buildPhase: resources
+    dependencies:
+      - target: HomeThreadShare
+    entitlements:
+      path: iOS/HomeThread.entitlements
+      properties:
+        com.apple.security.application-groups: [group.org.homeroll.thread]
     info:
       path: iOS/Info.plist
       properties:
@@ -58,6 +64,45 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # „HomeThread“ im Teilen-Menü anderer Apps (nur iPhone/iPad)
+  HomeThreadShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExt
+        excludes: ["Info.plist", "*.entitlements"]
+      - path: Shared/Core/ShareInbox.swift
+      - path: Resources/Localizable.xcstrings
+        buildPhase: resources
+    entitlements:
+      path: ShareExt/HomeThreadShare.entitlements
+      properties:
+        com.apple.security.application-groups: [group.org.homeroll.thread]
+    info:
+      path: ShareExt/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: HomeThread
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, de]
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 20
+              NSExtensionActivationSupportsMovieWithMaxCount: 10
+              NSExtensionActivationSupportsFileWithMaxCount: 10
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.homeroll.thread.share
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
 
   HomeThreadMac:
     type: application
