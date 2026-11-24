@@ -473,6 +473,8 @@ struct ChatHistory: View {
     @State private var position = ScrollPosition(idType: String.self)
     @State private var positioned = false
     @State private var lastShown: String?
+    /// Markieren über mehrere Einträge (Klicken + Ziehen, ⌘C)
+    @State private var textSelection = MacTextSelection()
 
     var body: some View {
         ScrollView {
@@ -487,6 +489,23 @@ struct ChatHistory: View {
         }
         .scrollPosition($position, anchor: .top)
         .defaultScrollAnchor(.bottom)
+        .environment(\.macTextSelection, textSelection)
+        .onAppear {
+            textSelection.openURL = { url in if !model.open(link: url) { NSWorkspace.shared.open(url) } }
+            textSelection.update(rows: timeline.rows)
+            textSelection.start()
+            #if DEBUG
+            if let f = ProcessInfo.processInfo.environment["THREAD_SELECT_TEST"] {
+                Task {
+                    try? await Task.sleep(for: .seconds(4))
+                    if f.hasSuffix("-scroll.txt") { await textSelection.debugDragUpward(to: f) } else { textSelection.debugDragAcross(to: f) }
+                }
+            }
+            #endif
+        }
+        .onDisappear { textSelection.stop() }
+        .onChange(of: version) { _, _ in textSelection.update(rows: timeline.rows) }
+        .onChange(of: selection == nil, initial: true) { _, off in textSelection.enabled = off }
         .onChange(of: version) { _, _ in
             if !positioned, let last = timeline.lastID {
                 position.scrollTo(id: last, anchor: .bottom)

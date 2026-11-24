@@ -72,6 +72,7 @@ struct MessageBubble: View {
     #if os(macOS)
     @State private var hover = false
     @State private var showMenu = false
+    @Environment(\.macTextSelection) private var textSelection
     #endif
 
     var message: Message { row.message }
@@ -178,6 +179,11 @@ struct MessageBubble: View {
                 .font(.system(size: [0, 56, 46, 38][message.largeEmojiCount ?? 1]))
                 .accessibilityIdentifier("bubble.emoji")
         case .text:
+            #if os(macOS)
+            // Mac: eigene Textdarstellung, damit sich über mehrere Einträge hinweg markieren lässt (MacTextSelection)
+            SelectableBubbleText(row: row.id, text: row.rich?.value ?? AttributedString(message.body), selection: textSelection)
+                .accessibilityIdentifier("bubble.text.\(message.body.prefix(40))")
+            #else
             Text(row.rich?.value ?? AttributedString(message.body))
                 .textSelection(.enabled)
                 .font(Self.textFont)
@@ -185,6 +191,7 @@ struct MessageBubble: View {
                 .tint(Theme.link)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("bubble.text.\(message.body.prefix(40))")
+            #endif
         case .image, .video:
             MediaThumb(row: row).onTapGesture { actions.onOpenMedia(message) }
             if !message.body.isEmpty { Text(message.body).padding(.horizontal, 8) }
